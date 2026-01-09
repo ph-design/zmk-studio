@@ -1,0 +1,62 @@
+{
+  "common": {
+    "save": "保存",
+    "discard": "放弃",
+    "undo": "撤销",
+    "redo": "重做",
+    "language": "语言",
+    "cancel": "取消",
+    "close": "关闭"
+  },
+  "welcome": {
+    "title": "欢迎使用 ZMK Studio",
+    "selectConnection": "选择连接类型。",
+    "selectDevice": "选择一个设备:",
+    "refresh": "刷新",
+    "unsupportedPrefix": "您的浏览器不受支持。ZMK Studio 使用",
+    "unsupportedMiddle": "或",
+    "unsupportedSuffix": "（仅 Linux）来连接到 ZMK 设备。",
+    "unsupportedOptions": "要使用 ZMK Studio，请执行以下操作之一:",
+    "chromeBrowser": "使用支持上述网络技术的浏览器，例如 Chrome/Edge，或",
+    "downloadAppPrefix": "下载我们的"
+  },
+  "header": {
+    "settings": "设置",
+    "resetSettings": "重置设置",
+    "resetWarning": "重置将移除在 ZMK Studio 中的所有自定义并恢复出厂键位",
+    "continue": "继续吗？",
+    "restoreStock": "恢复出厂设置",
+    "disconnect": "断开连接",
+    "confirmResetSettings": "您确定要重置所有设置吗？",
+    "unlockRequired": "需要解锁设备才能执行此操作",
+    "studio": "Studio"
+  },
+  "footer": {
+    "copyright": "© 2024 - ZMK 贡献者",
+    "about": "关于 ZMK Studio",
+    "license": "License NOTICE"
+  },
+  "about": {
+    "project": "ZMK 项目：",
+    "website": "网站",
+    "issues": "GitHub 问题",
+    "discord": "Discord 服务器"
+  },
+  "unlock": {
+    "title": "解锁以继续",
+    "body1": "出于安全原因，使用 ZMK Studio 前需要先解锁键盘。",
+    "body2Prefix": "如果尚未在键位或组合键中添加解锁，请参阅",
+    "docs": "Studio Unlock Behavior 文档",
+    "body2Suffix": "以获取更多信息。"
+  },
+  "license": {
+    "intro": "ZMK Studio 以 Apache 2.0 开源许可证发布。此处包含 ZMK Studio 仓库中的 NOTICE 文件："
+  },
+  "errors": {
+    "failedToConnect": "无法连接到所选设备",
+    "failedFirstRpc": "第一个 RPC 调用失败",
+    "failedToSave": "保存更改失败",
+    "failedToDiscard": "放弃更改失败",
+    "failedToReset": "重置设置失败"
+  }
+}

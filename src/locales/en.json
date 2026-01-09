@@ -1,0 +1,62 @@
+{
+  "common": {
+    "save": "Save",
+    "discard": "Discard",
+    "undo": "Undo",
+    "redo": "Redo",
+    "language": "Language",
+    "cancel": "Cancel",
+    "close": "Close"
+  },
+  "welcome": {
+    "title": "Welcome to ZMK Studio",
+    "selectConnection": "Select a connection type.",
+    "selectDevice": "Select A Device:",
+    "refresh": "Refresh",
+    "unsupportedPrefix": "Your browser is not supported. ZMK Studio uses either",
+    "unsupportedMiddle": "or",
+    "unsupportedSuffix": "(Linux only) to connect to ZMK devices.",
+    "unsupportedOptions": "To use ZMK Studio, either:",
+    "chromeBrowser": "Use a browser that supports the above web technologies, e.g. Chrome/Edge, or",
+    "downloadAppPrefix": "Download our"
+  },
+  "header": {
+    "settings": "Settings",
+    "resetSettings": "Reset Settings",
+    "resetWarning": "Settings reset will remove any customizations previously made in ZMK Studio and restore the stock keymap",
+    "continue": "Continue?",
+    "restoreStock": "Restore Stock Settings",
+    "disconnect": "Disconnect",
+    "confirmResetSettings": "Are you sure you want to reset all settings?",
+    "unlockRequired": "Device unlock required to perform this action",
+    "studio": "Studio"
+  },
+  "footer": {
+    "copyright": "© 2024 - The ZMK Contributors",
+    "about": "About ZMK Studio",
+    "license": "License NOTICE"
+  },
+  "about": {
+    "project": "The ZMK Project:",
+    "website": "website",
+    "issues": "GitHub Issues",
+    "discord": "Discord Server"
+  },
+  "unlock": {
+    "title": "Unlock To Continue",
+    "body1": "For security reasons, your keyboard requires unlocking before using ZMK Studio.",
+    "body2Prefix": "If studio unlocking hasn't been added to your keymap or a combo, see the",
+    "docs": "Studio Unlock Behavior documentation",
+    "body2Suffix": "for more infomation."
+  },
+  "license": {
+    "intro": "ZMK Studio is released under the open source Apache 2.0 license. A copy of the NOTICE file from the ZMK Studio repository is included here:"
+  },
+  "errors": {
+    "failedToConnect": "Failed to connect to the chosen device",
+    "failedFirstRpc": "Failed first RPC call",
+    "failedToSave": "Failed to save changes",
+    "failedToDiscard": "Failed to discard changes",
+    "failedToReset": "Failed to reset settings"
+  }
+}

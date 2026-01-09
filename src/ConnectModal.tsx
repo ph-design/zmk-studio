@@ -1,10 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import type { RpcTransport } from "@zmkfirmware/zmk-studio-ts-client/transport/index";
 import { UserCancelledError } from "@zmkfirmware/zmk-studio-ts-client/transport/errors";
 import type { AvailableDevice } from "./tauri/index";
-import { Bluetooth, RefreshCw } from "lucide-react";
-import { Key, ListBox, ListBoxItem, Selection } from "react-aria-components";
+import { Bluetooth, RefreshCw, Globe } from "lucide-react";
+import {
+  Key,
+  ListBox,
+  ListBoxItem,
+  Selection,
+  Button,
+  Menu,
+  MenuItem,
+  MenuTrigger,
+  Popover,
+} from "react-aria-components";
 import { useModalRef } from "./misc/useModalRef";
 import { ExternalLink } from "./misc/ExternalLink";
 import { GenericModal } from "./GenericModal";
@@ -30,6 +41,7 @@ function deviceList(
   transports: TransportFactory[],
   onTransportCreated: (t: RpcTransport) => void
 ) {
+  const { t } = useTranslation();
   const [devices, setDevices] = useState<
     Array<[TransportFactory, AvailableDevice]>
   >([]);
@@ -89,7 +101,7 @@ function deviceList(
   return (
     <div>
       <div className="grid grid-cols-[1fr_auto]">
-        <label>Select A Device:</label>
+        <label>{t("welcome.selectDevice")}</label>
         <button
           className="p-1 rounded hover:bg-base-300 disabled:bg-base-100 disabled:opacity-75"
           disabled={refreshing}
@@ -131,6 +143,7 @@ function simpleDevicePicker(
   transports: TransportFactory[],
   onTransportCreated: (t: RpcTransport) => void
 ) {
+  const { t } = useTranslation();
   const [availableDevices, setAvailableDevices] = useState<
     AvailableDevice[] | undefined
   >(undefined);
@@ -199,7 +212,7 @@ function simpleDevicePicker(
   ));
   return (
     <div>
-      <p className="text-sm">Select a connection type.</p>
+      <p className="text-sm">{t("welcome.selectConnection")}</p>
       <ul className="flex gap-2 pt-2">{connections}</ul>
       {selectedTransport && availableDevices && (
         <ul>
@@ -224,32 +237,26 @@ function simpleDevicePicker(
 }
 
 function noTransportsOptionsPrompt() {
+  const { t } = useTranslation();
   return (
     <div className="m-4 flex flex-col gap-2">
       <p>
-        Your browser is not supported. ZMK Studio uses either{" "}
-        <ExternalLink href="https://caniuse.com/web-serial">
-          Web Serial
-        </ExternalLink>{" "}
-        or{" "}
-        <ExternalLink href="https://caniuse.com/web-bluetooth">
-          Web Bluetooth
-        </ExternalLink>{" "}
-        (Linux only) to connect to ZMK devices.
+        {t("welcome.unsupportedPrefix")} {" "}
+        <ExternalLink href="https://caniuse.com/web-serial">Web Serial</ExternalLink> {" "}
+        {t("welcome.unsupportedMiddle")} {" "}
+        <ExternalLink href="https://caniuse.com/web-bluetooth">Web Bluetooth</ExternalLink> {" "}
+        {t("welcome.unsupportedSuffix")}
       </p>
 
       <div>
-        <p>To use ZMK Studio, either:</p>
+        <p>{t("welcome.unsupportedOptions")}</p>
         <ul className="list-disc list-inside">
           <li>
-            Use a browser that supports the above web technologies, e.g.
-            Chrome/Edge, or
+            {t("welcome.chromeBrowser")}
           </li>
           <li>
-            Download our{" "}
-            <ExternalLink href="/download">
-              cross platform application
-            </ExternalLink>
+            {t("welcome.downloadAppPrefix")} {" "}
+            <ExternalLink href="/download">cross platform application</ExternalLink>
             .
           </li>
         </ul>
@@ -278,13 +285,42 @@ export const ConnectModal = ({
   transports,
   onTransportCreated,
 }: ConnectModalProps) => {
+  const { t, i18n } = useTranslation();
   const dialog = useModalRef(open || false, false, false);
 
   const haveTransports = useMemo(() => transports.length > 0, [transports]);
 
   return (
     <GenericModal ref={dialog} className="max-w-xl">
-      <h1 className="text-xl">Welcome to ZMK Studio</h1>
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-xl">
+          {t("welcome.title")}
+        </h1>
+        <div className="flex-shrink-0">
+          <MenuTrigger>
+            <Button className="p-1 rounded hover:bg-base-300 ml-4">
+              <Globe className="w-4" />
+            </Button>
+            <Popover
+              {...({
+                className: "z-50",
+                placement: "bottom end" as const,
+                UNSTABLE_portal: true,
+                UNSTABLE_portalContainer: dialog.current ?? undefined,
+              } as any)}
+            >
+              <Menu className="shadow-lg rounded border border-base-300 bg-base-100 text-base-content cursor-pointer overflow-hidden z-50 min-w-32">
+                <MenuItem className="px-2 py-1 hover:bg-base-200" onAction={() => i18n.changeLanguage("en")}>
+                  English
+                </MenuItem>
+                <MenuItem className="px-2 py-1 hover:bg-base-200" onAction={() => i18n.changeLanguage("zh")}>
+                  中文
+                </MenuItem>
+              </Menu>
+            </Popover>
+          </MenuTrigger>
+        </div>
+      </div>
       {haveTransports
         ? connectOptions(transports, onTransportCreated, open)
         : noTransportsOptionsPrompt()}

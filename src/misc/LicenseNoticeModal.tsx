@@ -2,6 +2,7 @@ import { useModalRef } from "./useModalRef";
 
 import NOTICE from "../../NOTICE?raw";
 import { GenericModal } from "../GenericModal";
+import { useTranslation } from "react-i18next";
 
 export interface LicenseNoticeModalProps {
   open: boolean;
@@ -13,6 +14,7 @@ export const LicenseNoticeModal = ({
   onClose,
 }: LicenseNoticeModalProps) => {
   const ref = useModalRef(open, true);
+  const { t } = useTranslation();
 
   return (
     <GenericModal
@@ -23,15 +25,13 @@ export const LicenseNoticeModal = ({
       <div>
         <div className="flex justify-between items-start">
           <p className="mr-2">
-            ZMK Studio is released under the open source Apache 2.0 license. A
-            copy of the NOTICE file from the ZMK Studio repository is included
-            here:
+            {t("license.intro")}
           </p>
           <button
             className="p-1.5 rounded-md bg-gray-100 text-black hover:bg-gray-300"
             onClick={onClose}
           >
-            Close
+            {t("common.close")}
           </button>
         </div>
         <pre className="m-4 font-mono text-xs">{NOTICE}</pre>

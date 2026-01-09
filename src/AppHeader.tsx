@@ -12,9 +12,10 @@ import { useModalRef } from "./misc/useModalRef";
 import { LockStateContext } from "./rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { ConnectionContext } from "./rpc/ConnectionContext";
-import { ChevronDown, Undo2, Redo2, Save, Trash2 } from "lucide-react";
+import { ChevronDown, Undo2, Redo2, Save, Trash2, Globe } from "lucide-react";
 import { Tooltip } from "./misc/Tooltip";
 import { GenericModal } from "./GenericModal";
+import { useTranslation } from "react-i18next";
 
 export interface AppHeaderProps {
   connectedDeviceLabel?: string;
@@ -39,6 +40,7 @@ export const AppHeader = ({
   onDisconnect,
   onResetSettings,
 }: AppHeaderProps) => {
+  const { t, i18n } = useTranslation();
   const [showSettingsReset, setShowSettingsReset] = useState(false);
 
   const lockState = useContext(LockStateContext);
@@ -68,22 +70,19 @@ export const AppHeader = ({
     <header className="top-0 left-0 right-0 grid grid-cols-[1fr_auto_1fr] items-center justify-between h-10 max-w-full">
       <div className="flex px-3 items-center gap-1">
         <img src="/zmk.svg" alt="ZMK Logo" className="h-8 rounded" />
-        <p>Studio</p>
+        <p>{t("header.studio")}</p>
       </div>
       <GenericModal ref={showSettingsRef} className="max-w-[50vw]">
-        <h2 className="my-2 text-lg">Restore Stock Settings</h2>
+        <h2 className="my-2 text-lg">{t("header.resetSettings")}</h2>
         <div>
-          <p>
-            Settings reset will remove any customizations previously made in ZMK
-            Studio and restore the stock keymap
-          </p>
-          <p>Continue?</p>
+          <p>{t("header.resetWarning")}</p>
+          <p>{t("header.continue")}</p>
           <div className="flex justify-end my-2 gap-3">
             <Button
               className="rounded bg-base-200 hover:bg-base-300 px-3 py-2"
               onPress={() => setShowSettingsReset(false)}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               className="rounded bg-base-200 hover:bg-base-300 px-3 py-2"
@@ -92,7 +91,7 @@ export const AppHeader = ({
                 onResetSettings?.();
               }}
             >
-              Restore Stock Settings
+              {t("header.restoreStock")}
             </Button>
           </div>
         </div>
@@ -111,20 +110,46 @@ export const AppHeader = ({
               className="px-2 py-1 hover:bg-base-200"
               onAction={onDisconnect}
             >
-              Disconnect
+              {t("header.disconnect")}
             </MenuItem>
             <MenuItem
               className="px-2 py-1 hover:bg-base-200"
               onAction={() => setShowSettingsReset(true)}
             >
-              Restore Stock Settings
+              {t("header.restoreStock")}
             </MenuItem>
           </Menu>
         </Popover>
       </MenuTrigger>
       <div className="flex justify-end gap-1 px-2">
+        <Tooltip label={t("common.language")}>
+          <MenuTrigger>
+            <Button
+              className="flex items-center justify-center p-1.5 rounded hover:bg-base-300"
+            >
+              <Globe className="inline-block w-4" aria-label="Language" />
+            </Button>
+            <Popover>
+              <Menu className="shadow-md rounded bg-base-100 text-base-content cursor-pointer overflow-hidden">
+                <MenuItem
+                  className="px-2 py-1 hover:bg-base-200"
+                  onAction={() => i18n.changeLanguage("en")}
+                >
+                  English
+                </MenuItem>
+                <MenuItem
+                  className="px-2 py-1 hover:bg-base-200"
+                  onAction={() => i18n.changeLanguage("zh")}
+                >
+                  中文
+                </MenuItem>
+              </Menu>
+            </Popover>
+          </MenuTrigger>
+        </Tooltip>
+
         {onUndo && (
-          <Tooltip label="Undo">
+          <Tooltip label={t("common.undo")}>
             <Button
               className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
               isDisabled={!canUndo}
@@ -136,7 +161,7 @@ export const AppHeader = ({
         )}
 
         {onRedo && (
-          <Tooltip label="Redo">
+          <Tooltip label={t("common.redo")}>
             <Button
               className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
               isDisabled={!canRedo}
@@ -146,7 +171,7 @@ export const AppHeader = ({
             </Button>
           </Tooltip>
         )}
-        <Tooltip label="Save">
+        <Tooltip label={t("common.save")}>
           <Button
             className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
             isDisabled={!unsaved}
@@ -155,7 +180,7 @@ export const AppHeader = ({
             <Save className="inline-block w-4 mx-1" aria-label="Save" />
           </Button>
         </Tooltip>
-        <Tooltip label="Discard">
+        <Tooltip label={t("common.discard")}>
           <Button
             className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
             onPress={onDiscard}

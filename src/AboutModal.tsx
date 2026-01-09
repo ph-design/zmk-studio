@@ -42,6 +42,7 @@ import splitkb from "./assets/splitkb.png";
 import splitkbDarkMode from "./assets/splitkb-dark-mode.png";
 import { GenericModal } from "./GenericModal";
 import { ExternalLink } from "./misc/ExternalLink";
+import { useTranslation } from "react-i18next";
 
 export interface AboutModalProps {
   open: boolean;
@@ -177,26 +178,27 @@ const sponsors = [
 
 export const AboutModal = ({ open, onClose }: AboutModalProps) => {
   const ref = useModalRef(open, true);
+  const { t } = useTranslation();
 
   return (
     <GenericModal ref={ref} className="min-w-min w-[70vw]" onClose={onClose}>
       <div className="flex justify-between items-start">
         <p>
-          The ZMK Project:{" "}
-          <ExternalLink href="https://zmk.dev/">website</ExternalLink>,{" "}
+          {t("about.project")} {" "}
+          <ExternalLink href="https://zmk.dev/">{t("about.website")}</ExternalLink>, {" "}
           <ExternalLink href="https://github.com/zmkfirmware/zmk/issues/">
-            GitHub Issues
+            {t("about.issues")}
           </ExternalLink>
           ,{" "}
           <ExternalLink href="https://zmk.dev/community/discord/invite">
-            Discord Server
+            {t("about.discord")}
           </ExternalLink>
         </p>
         <button
           className="p-1.5 rounded-md bg-gray-100 text-black hover:bg-gray-300"
           onClick={onClose}
         >
-          Close
+          {t("common.close")}
         </button>
       </div>
       <div>
