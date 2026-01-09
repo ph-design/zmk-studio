@@ -18,7 +18,8 @@
     "unsupportedSuffix": "（仅 Linux）来连接到 ZMK 设备。",
     "unsupportedOptions": "要使用 ZMK Studio，请执行以下操作之一:",
     "chromeBrowser": "使用支持上述网络技术的浏览器，例如 Chrome/Edge，或",
-    "downloadAppPrefix": "下载我们的"
+    "downloadAppPrefix": "下载我们的",
+    "crossPlatformApp": "跨平台应用程序"
   },
   "header": {
     "settings": "设置",

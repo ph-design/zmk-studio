@@ -252,7 +252,7 @@ function noTransportsOptionsPrompt() {
           </li>
           <li>
             {t("welcome.downloadAppPrefix")} {" "}
-            <ExternalLink href="/download">cross platform application</ExternalLink>
+            <ExternalLink href="/download">{t("welcome.crossPlatformApp")}</ExternalLink>
             .
           </li>
         </ul>

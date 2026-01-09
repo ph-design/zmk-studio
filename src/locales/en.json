@@ -18,7 +18,8 @@
     "unsupportedSuffix": "(Linux only) to connect to ZMK devices.",
     "unsupportedOptions": "To use ZMK Studio, either:",
     "chromeBrowser": "Use a browser that supports the above web technologies, e.g. Chrome/Edge, or",
-    "downloadAppPrefix": "Download our"
+    "downloadAppPrefix": "Download our",
+    "crossPlatformApp": "cross platform application"
   },
   "header": {
     "settings": "Settings",
