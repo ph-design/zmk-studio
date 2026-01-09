@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { RpcTransport } from "@zmkfirmware/zmk-studio-ts-client/transport/index";
 import { UserCancelledError } from "@zmkfirmware/zmk-studio-ts-client/transport/errors";
 import type { AvailableDevice } from "./tauri/index";
-import { Bluetooth, RefreshCw, Globe } from "lucide-react";
+import { Bluetooth, RefreshCw, Languages } from "lucide-react";
 import {
   Key,
   ListBox,
@@ -309,7 +309,7 @@ export const ConnectModal = ({
             className="p-1 rounded hover:bg-base-300 ml-4"
             onPress={() => setLangOpen((open) => !open)}
           >
-            <Globe className="w-4" />
+            <Languages className="w-4" />
           </Button>
           {langOpen && (
             <div className="absolute right-0 mt-1 shadow-lg rounded border border-base-300 bg-base-100 text-base-content overflow-hidden z-50 min-w-32">

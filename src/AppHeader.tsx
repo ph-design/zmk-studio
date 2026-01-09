@@ -12,7 +12,7 @@ import { useModalRef } from "./misc/useModalRef";
 import { LockStateContext } from "./rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { ConnectionContext } from "./rpc/ConnectionContext";
-import { ChevronDown, Undo2, Redo2, Save, Trash2, Globe } from "lucide-react";
+import { ChevronDown, Undo2, Redo2, Save, Trash2, Languages } from "lucide-react";
 import { Tooltip } from "./misc/Tooltip";
 import { GenericModal } from "./GenericModal";
 import { useTranslation } from "react-i18next";
@@ -127,7 +127,7 @@ export const AppHeader = ({
             <Button
               className="flex items-center justify-center p-1.5 rounded hover:bg-base-300"
             >
-              <Globe className="inline-block w-4" aria-label="Language" />
+              <Languages className="inline-block w-4" aria-label="Language" />
             </Button>
             <Popover>
               <Menu className="shadow-md rounded bg-base-100 text-base-content cursor-pointer overflow-hidden">
