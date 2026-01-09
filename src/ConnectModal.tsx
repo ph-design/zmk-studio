@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { RpcTransport } from "@zmkfirmware/zmk-studio-ts-client/transport/index";
@@ -11,10 +11,6 @@ import {
   ListBoxItem,
   Selection,
   Button,
-  Menu,
-  MenuItem,
-  MenuTrigger,
-  Popover,
 } from "react-aria-components";
 import { useModalRef } from "./misc/useModalRef";
 import { ExternalLink } from "./misc/ExternalLink";
@@ -287,6 +283,18 @@ export const ConnectModal = ({
 }: ConnectModalProps) => {
   const { t, i18n } = useTranslation();
   const dialog = useModalRef(open || false, false, false);
+  const [langOpen, setLangOpen] = useState(false);
+  const langRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleClick = (event: MouseEvent) => {
+      if (langRef.current && !langRef.current.contains(event.target as Node)) {
+        setLangOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   const haveTransports = useMemo(() => transports.length > 0, [transports]);
 
@@ -296,29 +304,35 @@ export const ConnectModal = ({
         <h1 className="text-xl">
           {t("welcome.title")}
         </h1>
-        <div className="flex-shrink-0">
-          <MenuTrigger>
-            <Button className="p-1 rounded hover:bg-base-300 ml-4">
-              <Globe className="w-4" />
-            </Button>
-            <Popover
-              {...({
-                className: "z-50",
-                placement: "bottom end" as const,
-                UNSTABLE_portal: true,
-                UNSTABLE_portalContainer: dialog.current ?? undefined,
-              } as any)}
-            >
-              <Menu className="shadow-lg rounded border border-base-300 bg-base-100 text-base-content cursor-pointer overflow-hidden z-50 min-w-32">
-                <MenuItem className="px-2 py-1 hover:bg-base-200" onAction={() => i18n.changeLanguage("en")}>
-                  English
-                </MenuItem>
-                <MenuItem className="px-2 py-1 hover:bg-base-200" onAction={() => i18n.changeLanguage("zh")}>
-                  中文
-                </MenuItem>
-              </Menu>
-            </Popover>
-          </MenuTrigger>
+        <div className="flex-shrink-0 relative" ref={langRef}>
+          <Button
+            className="p-1 rounded hover:bg-base-300 ml-4"
+            onPress={() => setLangOpen((open) => !open)}
+          >
+            <Globe className="w-4" />
+          </Button>
+          {langOpen && (
+            <div className="absolute right-0 mt-1 shadow-lg rounded border border-base-300 bg-base-100 text-base-content overflow-hidden z-50 min-w-32">
+              <button
+                className="w-full text-left px-2 py-1 hover:bg-base-200"
+                onClick={() => {
+                  i18n.changeLanguage("en");
+                  setLangOpen(false);
+                }}
+              >
+                English
+              </button>
+              <button
+                className="w-full text-left px-2 py-1 hover:bg-base-200"
+                onClick={() => {
+                  i18n.changeLanguage("zh");
+                  setLangOpen(false);
+                }}
+              >
+                中文
+              </button>
+            </div>
+          )}
         </div>
       </div>
       {haveTransports
