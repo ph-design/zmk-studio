@@ -176,36 +176,34 @@ const sponsors = [
   },
 ];
 
-export const AboutModal = ({ open, onClose }: AboutModalProps) => {
-  const ref = useModalRef(open, true);
+export const AboutModal = ({ onClose, open }: AboutModalProps) => {
   const { t } = useTranslation();
+  const ref = useModalRef(open, false, false);
 
   return (
-    <GenericModal ref={ref} className="min-w-min w-[70vw]" onClose={onClose}>
-      <div className="flex justify-between items-start">
-        <p>
-          {t("about.project")} {" "}
-          <ExternalLink href="https://zmk.dev/">{t("about.website")}</ExternalLink>, {" "}
+    <GenericModal ref={ref} className="min-w-min w-[70vw] p-6 rounded-2xl bg-base-100 shadow-xl" onClose={onClose}>
+      <div className="flex justify-between items-start mb-4">
+        <p className="text-base-content/80">
+          {t('about.project')}{" "}
+          <ExternalLink href="https://zmk.dev/">{t('about.website')}</ExternalLink>,{" "}
           <ExternalLink href="https://github.com/zmkfirmware/zmk/issues/">
-            {t("about.issues")}
+            {t('about.issues')}
           </ExternalLink>
           ,{" "}
           <ExternalLink href="https://zmk.dev/community/discord/invite">
-            {t("about.discord")}
+            {t('about.discord')}
           </ExternalLink>
         </p>
         <button
-          className="p-1.5 rounded-md bg-gray-100 text-black hover:bg-gray-300"
+          className="p-2 rounded-full hover:bg-base-200 transition-colors"
           onClick={onClose}
         >
-          {t("common.close")}
+          {t('about.close')}
         </button>
       </div>
       <div>
-        <p className="py-1 mr-2">
-          ZMK Studio is made possible thanks to the generous donation of time
-          from our contributors, as well as the financial sponsorship from the
-          following vendors:
+        <p className="py-1 mr-2 text-base-content/80">
+          {t('about.sponsorship')}
         </p>
       </div>
       <div className="grid gap-2 auto-rows-auto grid-cols-[auto_minmax(min-content,1fr)] justify-items-center items-center">

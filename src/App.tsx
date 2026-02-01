@@ -1,6 +1,4 @@
 import { AppHeader } from "./AppHeader";
-import i18n from "./i18n";
-import { I18nextProvider, useTranslation } from "react-i18next";
 
 import { create_rpc_connection } from "@zmkfirmware/zmk-studio-ts-client";
 import { call_rpc } from "./rpc/logging";
@@ -144,7 +142,8 @@ async function connect(
 
   if (!details) {
     // TODO: Show a proper toast/alert not using `window.alert`
-    window.alert(i18n.t("errors.failedToConnect"));
+    // window.alert("Failed to connect to the chosen device");
+    console.error("Failed to connect to the chosen device");
     return;
   }
 
@@ -163,11 +162,22 @@ async function connect(
 }
 
 function App() {
-  const { t } = useTranslation();
   const [conn, setConn] = useState<ConnectionState>({ conn: null });
   const [connectedDeviceName, setConnectedDeviceName] = useState<
     string | undefined
   >(undefined);
+  const [userNickname, setUserNickname] = useState<string>(() => {
+    return localStorage.getItem("userNickname") || "";
+  });
+
+  useEffect(() => {
+    if (userNickname) {
+      localStorage.setItem("userNickname", userNickname);
+    } else {
+      localStorage.removeItem("userNickname");
+    }
+  }, [userNickname]);
+
   const [doIt, undo, redo, canUndo, canRedo, reset] = useUndoRedo();
   const [showAbout, setShowAbout] = useState(false);
   const [showLicenseNotice, setShowLicenseNotice] = useState(false);
@@ -213,7 +223,7 @@ function App() {
 
       let resp = await call_rpc(conn.conn, { keymap: { saveChanges: true } });
       if (!resp.keymap?.saveChanges || resp.keymap?.saveChanges.err) {
-        console.error(t("errors.failedToSave"), resp.keymap?.saveChanges);
+        console.error("Failed to save changes", resp.keymap?.saveChanges);
       }
     }
 
@@ -230,7 +240,7 @@ function App() {
         keymap: { discardChanges: true },
       });
       if (!resp.keymap?.discardChanges) {
-        console.error(t("errors.failedToDiscard"), resp);
+        console.error("Failed to discard changes", resp);
       }
 
       reset();
@@ -250,7 +260,7 @@ function App() {
         core: { resetSettings: true },
       });
       if (!resp.core?.resetSettings) {
-        console.error(t("errors.failedToReset"), resp);
+        console.error("Failed to settings reset", resp);
       }
 
       reset();
@@ -284,43 +294,42 @@ function App() {
   );
 
   return (
-    <I18nextProvider i18n={i18n}>
-      <ConnectionContext.Provider value={conn}>
-        <LockStateContext.Provider value={lockState}>
-          <UndoRedoContext.Provider value={doIt}>
-            <UnlockModal />
-            <ConnectModal
-              open={!conn.conn}
-              transports={TRANSPORTS}
-              onTransportCreated={onConnect}
+    <ConnectionContext.Provider value={conn}>
+      <LockStateContext.Provider value={lockState}>
+        <UndoRedoContext.Provider value={doIt}>
+          <UnlockModal />
+          <ConnectModal
+            open={!conn.conn}
+            transports={TRANSPORTS}
+            onTransportCreated={onConnect}
+          />
+          <AboutModal open={showAbout} onClose={() => setShowAbout(false)} />
+          <LicenseNoticeModal
+            open={showLicenseNotice}
+            onClose={() => setShowLicenseNotice(false)}
+          />
+          <div className="bg-base-100 text-base-content h-full max-h-[100vh] w-full max-w-[100vw] inline-grid grid-cols-[auto] grid-rows-[auto_1fr_auto] overflow-hidden">
+            <AppHeader
+              connectedDeviceLabel={userNickname || connectedDeviceName}
+              canUndo={canUndo}
+              canRedo={canRedo}
+              onUndo={undo}
+              onRedo={redo}
+              onSave={save}
+              onDiscard={discard}
+              onDisconnect={disconnect}
+              onResetSettings={resetSettings}
+              onNicknameChange={setUserNickname}
             />
-            <AboutModal open={showAbout} onClose={() => setShowAbout(false)} />
-            <LicenseNoticeModal
-              open={showLicenseNotice}
-              onClose={() => setShowLicenseNotice(false)}
+            <Keyboard />
+            <AppFooter
+              onShowAbout={() => setShowAbout(true)}
+              onShowLicenseNotice={() => setShowLicenseNotice(true)}
             />
-            <div className="bg-base-100 text-base-content h-full max-h-[100vh] w-full max-w-[100vw] inline-grid grid-cols-[auto] grid-rows-[auto_1fr_auto] overflow-hidden">
-              <AppHeader
-                connectedDeviceLabel={connectedDeviceName}
-                canUndo={canUndo}
-                canRedo={canRedo}
-                onUndo={undo}
-                onRedo={redo}
-                onSave={save}
-                onDiscard={discard}
-                onDisconnect={disconnect}
-                onResetSettings={resetSettings}
-              />
-              <Keyboard />
-              <AppFooter
-                onShowAbout={() => setShowAbout(true)}
-                onShowLicenseNotice={() => setShowLicenseNotice(true)}
-              />
-            </div>
-          </UndoRedoContext.Provider>
-        </LockStateContext.Provider>
-      </ConnectionContext.Provider>
-    </I18nextProvider>
+          </div>
+        </UndoRedoContext.Provider>
+      </LockStateContext.Provider>
+    </ConnectionContext.Provider>
   );
 }
 

@@ -17,6 +17,7 @@ export type KeyPosition = PropsWithChildren<{
   r?: number;
   rx?: number;
   ry?: number;
+  layerBindings?: any[];
 }>;
 
 export type LayoutZoom = number | "auto";
@@ -35,6 +36,7 @@ interface PhysicalLayoutProps {
   hoverZoom?: boolean;
   zoom?: LayoutZoom;
   onPositionClicked?: (position: number) => void;
+  previewMode?: boolean;
 }
 
 interface PhysicalLayoutPositionLocation {
@@ -76,6 +78,7 @@ export const PhysicalLayout = ({
   selectedPosition,
   oneU = 48,
   onPositionClicked,
+  previewMode = false,
   ...props
 }: PhysicalLayoutProps) => {
   const ref = useRef<HTMLDivElement>(null);
@@ -128,11 +131,11 @@ export const PhysicalLayout = ({
       <div
         key={p.id}
         onClick={() => onPositionClicked?.(idx)}
-        className="hover:[transform:translateZ(100px)] transition-transform duration-200"
       >
         <Key
           oneU={oneU}
           selected={idx === selectedPosition}
+          previewMode={previewMode}
           {...p}
         />
       </div>

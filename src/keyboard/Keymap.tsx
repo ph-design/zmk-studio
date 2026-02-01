@@ -36,6 +36,20 @@ export const Keymap = ({
   }
 
   const positions = layout.keys.map((k, i) => {
+    // Gather multi-layer data for this key position
+    const layerBindings = keymap.layers.map((layer, layerIndex) => {
+      const binding = layer.bindings[i];
+      if (!binding) return { layerIndex, name: layer.name, behavior: "Unknown", param: "" };
+      
+      const behavior = behaviors[binding.behaviorId];
+      return {
+        layerIndex,
+        layerName: layer.name || `Layer ${layerIndex}`,
+        behaviorDisplayName: behavior?.displayName || "Unknown",
+        binding
+      };
+    });
+
     if (i >= keymap.layers[selectedLayerIndex].bindings.length) {
       return {
         id: `${keymap.layers[selectedLayerIndex].id}-${i}`,
@@ -45,14 +59,23 @@ export const Keymap = ({
         width: k.width / 100,
         height: k.height / 100.0,
         children: <span></span>,
+        layerBindings
       };
+    }
+
+    let header: string | undefined =
+      behaviors[keymap.layers[selectedLayerIndex].bindings[i].behaviorId]
+        ?.displayName || "Unknown";
+
+    // Hide header if it's "Unknown" or "&trans" (often mapped to "Transparent" or similar)
+    const hiddenHeaders = ["Unknown", "&trans", "Trans", "Transparent", "&none", "None"];
+    if (hiddenHeaders.includes(header)) {
+      header = undefined;
     }
 
     return {
       id: `${keymap.layers[selectedLayerIndex].id}-${i}`,
-      header:
-        behaviors[keymap.layers[selectedLayerIndex].bindings[i].behaviorId]
-          ?.displayName || "Unknown",
+      header,
       x: k.x / 100.0,
       y: k.y / 100.0,
       width: k.width / 100,
@@ -61,17 +84,20 @@ export const Keymap = ({
       rx: (k.rx || 0) / 100.0,
       ry: (k.ry || 0) / 100.0,
       children: (
-        <HidUsageLabel
-          hid_usage={keymap.layers[selectedLayerIndex].bindings[i].param1}
-        />
+        header ? (
+          <HidUsageLabel
+            hid_usage={keymap.layers[selectedLayerIndex].bindings[i].param1}
+          />
+        ) : null
       ),
+      layerBindings
     };
   });
 
   return (
     <PhysicalLayoutComp
       positions={positions}
-      oneU={48}
+      oneU={60}
       hoverZoom={true}
       zoom={scale}
       selectedPosition={selectedKeyPosition}

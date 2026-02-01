@@ -8,7 +8,7 @@ import { ConnectionContext } from "./rpc/ConnectionContext";
 import { useModalRef } from "./misc/useModalRef";
 import { GenericModal } from "./GenericModal";
 import { ExternalLink } from "./misc/ExternalLink";
-import { useTranslation } from "react-i18next";
+import { useTranslation, Trans } from "react-i18next";
 
 export type TransportFactory = {
   label: string;
@@ -22,9 +22,9 @@ export type TransportFactory = {
 export interface UnlockModalProps {}
 
 export const UnlockModal = ({}: UnlockModalProps) => {
+  const { t } = useTranslation();
   let conn = useContext(ConnectionContext);
   let lockState = useContext(LockStateContext);
-  const { t } = useTranslation();
 
   let open = useMemo(
     () =>
@@ -34,15 +34,19 @@ export const UnlockModal = ({}: UnlockModalProps) => {
   const dialog = useModalRef(open, false, false);
 
   return (
-    <GenericModal ref={dialog}>
-      <h1 className="text-xl">{t("unlock.title")}</h1>
-      <p>{t("unlock.body1")}</p>
-      <p>
-        {t("unlock.body2Prefix")}{" "}
-        <ExternalLink href="https://zmk.dev/docs/keymaps/behaviors/studio-unlock">
-          {t("unlock.docs")}
-        </ExternalLink>{" "}
-        {t("unlock.body2Suffix")}
+    <GenericModal ref={dialog} className="p-6 rounded-2xl bg-base-100 shadow-xl max-w-md">
+      <h1 className="text-2xl font-medium mb-4">{t('unlock.title')}</h1>
+      <p className="mb-4 text-base-content/80">
+        {t('unlock.desc1')}
+      </p>
+      <p className="text-base-content/80">
+        <Trans i18nKey="unlock.desc2">
+          If studio unlocking hasn't been added to your keymap or a combo, see the{" "}
+          <ExternalLink href="https://zmk.dev/docs/keymaps/behaviors/studio-unlock">
+            Studio Unlock Behavior
+          </ExternalLink>{" "}
+          documentation for more infomation.
+        </Trans>
       </p>
     </GenericModal>
   );

@@ -1,4 +1,4 @@
-import { Pencil, Minus, Plus } from "lucide-react";
+import { Pencil, Minus, Plus, Layers, GripVertical } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import {
   DropIndicator,
@@ -7,9 +7,11 @@ import {
   ListBoxItem,
   Selection,
   useDragAndDrop,
+  Button,
 } from "react-aria-components";
 import { useModalRef } from "../misc/useModalRef";
 import { GenericModal } from "../GenericModal";
+import { useTranslation } from "react-i18next";
 
 interface Layer {
   id: number;
@@ -114,6 +116,7 @@ export const LayerPicker = ({
   onLayerNameChanged,
   ...props
 }: LayerPickerProps) => {
+  const { t } = useTranslation();
   const [editLabelData, setEditLabelData] = useState<EditLabelData | null>(
     null
   );
@@ -166,29 +169,32 @@ export const LayerPicker = ({
   );
 
   return (
-    <div className="flex flex-col min-w-40">
-      <div className="grid grid-cols-[1fr_auto_auto] items-center">
-        <Label className="after:content-[':'] text-sm">Layers</Label>
-        {onRemoveClicked && (
-          <button
-            type="button"
-            className="hover:text-primary-content hover:bg-primary rounded-sm"
-            disabled={!canRemove}
-            onClick={onRemoveClicked}
-          >
-            <Minus className="size-4" />
-          </button>
-        )}
-        {onAddClicked && (
-          <button
-            type="button"
-            disabled={!canAdd}
-            className="hover:text-primary-content ml-1 hover:bg-primary rounded-sm disabled:text-gray-500 disabled:hover:bg-base-300 disabled:cursor-not-allowed"
-            onClick={onAddClicked}
-          >
-            <Plus className="size-4" />
-          </button>
-        )}
+    <div className="flex flex-col gap-3 min-w-40 flex-1 min-h-0">
+      <div className="flex items-center justify-between px-1">
+        <Label className="text-xs font-bold uppercase tracking-wider text-base-content/50 flex items-center gap-2">
+          <Layers className="size-3.5" />
+          {t('keyboard.category.layers', 'Layers')}
+        </Label>
+        <div className="flex items-center gap-1">
+          {onRemoveClicked && (
+            <Button
+              className="p-1.5 rounded-md hover:bg-base-300 text-base-content/50 hover:text-error disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-base-content/50 transition-colors"
+              isDisabled={!canRemove}
+              onPress={onRemoveClicked}
+            >
+              <Minus className="size-3.5" />
+            </Button>
+          )}
+          {onAddClicked && (
+            <Button
+              isDisabled={!canAdd}
+              className="p-1.5 rounded-md hover:bg-base-300 text-base-content/50 hover:text-primary disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-base-content/50 transition-colors"
+              onPress={onAddClicked}
+            >
+              <Plus className="size-3.5" />
+            </Button>
+          )}
+        </div>
       </div>
       {editLabelData !== null && (
         <EditLabelModal
@@ -208,7 +214,7 @@ export const LayerPicker = ({
             ? [layer_items[selectedLayerIndex].id]
             : []
         }
-        className="ml-2 items-center justify-center cursor-pointer"
+        className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-1 pr-1 outline-none"
         onSelectionChange={selectionChanged}
         dragAndDropHooks={dragAndDropHooks}
         {...props}
@@ -216,15 +222,20 @@ export const LayerPicker = ({
         {(layer_item) => (
           <ListBoxItem
             textValue={layer_item.name}
-            className="p-1 b-1 my-1 group grid grid-cols-[1fr_auto] items-center aria-selected:bg-primary aria-selected:text-primary-content border rounded border-transparent border-solid hover:bg-base-300"
+            className="group relative flex items-center gap-3 p-2.5 rounded-xl cursor-pointer outline-none border border-transparent selected:bg-primary selected:text-primary-content selected:shadow-md hover:bg-base-100 hover:border-base-200 transition-all text-sm font-medium"
           >
-            <span>{layer_item.name}</span>
-            <Pencil
-              className="h-4 w-4 mx-1 invisible group-hover:visible"
-              onClick={() =>
+            <Button slot="drag" className="cursor-grab active:cursor-grabbing text-base-content/20 hover:text-base-content/50 group-selected:text-primary-content/50 group-selected:hover:text-primary-content">
+              <GripVertical className="size-3.5" />
+            </Button>
+            <span className="flex-1 truncate font-semibold">{layer_item.name}</span>
+            <Button
+              className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-base-content/10 group-selected:hover:bg-primary-content/20 transition-all"
+              onPress={() =>
                 setEditLabelData({ id: layer_item.id, name: layer_item.name })
               }
-            />
+            >
+              <Pencil className="size-3.5" />
+            </Button>
           </ListBoxItem>
         )}
       </ListBox>

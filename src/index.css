@@ -8,10 +8,146 @@
     src: url("/Inter.woff2") format("woff2");
     font-display: fallback;
   }
+
+  :root {
+    /* Material Design 3 - Light (Monochrome/Black & White) */
+    --md-sys-color-primary: #000000;
+    --md-sys-color-on-primary: #FFFFFF;
+    --md-sys-color-primary-container: #E5E5E5;
+    --md-sys-color-on-primary-container: #000000;
+    
+    --md-sys-color-secondary: #404040;
+    --md-sys-color-on-secondary: #FFFFFF;
+    --md-sys-color-secondary-container: #F5F5F5;
+    --md-sys-color-on-secondary-container: #000000;
+    
+    --md-sys-color-background: #FFFFFF;
+    --md-sys-color-on-background: #000000;
+    
+    --md-sys-color-surface: #FFFFFF;
+    --md-sys-color-on-surface: #000000;
+
+    --md-sys-color-surface-variant: #F5F5F5;
+    --md-sys-color-on-surface-variant: #404040;
+
+    /* Base colors mapping for existing usage */
+    --color-primary: var(--md-sys-color-primary);
+    --color-primary-content: var(--md-sys-color-on-primary);
+    --color-secondary: var(--md-sys-color-secondary);
+    --color-base-100: var(--md-sys-color-background);
+    --color-base-content: var(--md-sys-color-on-background);
+    --color-base-200: var(--md-sys-color-surface-variant);
+    --color-base-300: #E5E5E5; 
+    --color-accent: #000000;
+
+    color-scheme: light;
+  }
+
+  :root.dark {
+    /* Material Design 3 - Dark */
+    --md-sys-color-primary: #D0BCFF;
+    --md-sys-color-on-primary: #381E72;
+    --md-sys-color-primary-container: #4F378B;
+    --md-sys-color-on-primary-container: #EADDFF;
+    
+    --md-sys-color-secondary: #CCC2DC;
+    --md-sys-color-on-secondary: #332D41;
+    --md-sys-color-secondary-container: #4A4458;
+    --md-sys-color-on-secondary-container: #E8DEF8;
+    
+    --md-sys-color-background: #1C1B1F;
+    --md-sys-color-on-background: #E6E1E5;
+    
+    --md-sys-color-surface: #1C1B1F;
+    --md-sys-color-on-surface: #E6E1E5;
+
+    --md-sys-color-surface-variant: #49454F;
+    --md-sys-color-on-surface-variant: #CAC4D0;
+
+    /* Base colors mapping */
+    --color-primary: var(--md-sys-color-primary);
+    --color-primary-content: var(--md-sys-color-on-primary);
+    --color-secondary: var(--md-sys-color-secondary);
+    --color-base-100: var(--md-sys-color-background);
+    --color-base-content: var(--md-sys-color-on-background);
+    --color-base-200: var(--md-sys-color-surface-variant);
+    --color-base-300: #4F378B;
+    --color-accent: #EFB8C8;
+
+    color-scheme: dark;
+  }
+
+  :root.high-contrast-dark {
+    /* High Contrast Dark */
+    --md-sys-color-primary: #FFB7FF; /* Lighter primary */
+    --md-sys-color-on-primary: #000000;
+    --md-sys-color-primary-container: #FFD6FF;
+    --md-sys-color-on-primary-container: #3E0040;
+    
+    --md-sys-color-secondary: #E0E0E0; /* Much lighter secondary */
+    --md-sys-color-on-secondary: #000000;
+    --md-sys-color-secondary-container: #FFFFFF;
+    --md-sys-color-on-secondary-container: #000000;
+    
+    --md-sys-color-background: #000000; /* Pure black background */
+    --md-sys-color-on-background: #FFFFFF; /* Pure white text */
+    
+    --md-sys-color-surface: #000000;
+    --md-sys-color-on-surface: #FFFFFF;
+
+    --md-sys-color-surface-variant: #1A1A1A;
+    --md-sys-color-on-surface-variant: #FFFFFF;
+
+    /* Base colors mapping */
+    --color-primary: var(--md-sys-color-primary);
+    --color-primary-content: var(--md-sys-color-on-primary);
+    --color-secondary: var(--md-sys-color-secondary);
+    --color-base-100: var(--md-sys-color-background);
+    --color-base-content: var(--md-sys-color-on-background);
+    --color-base-200: var(--md-sys-color-surface-variant);
+    --color-base-300: #333333;
+    --color-accent: #FFFF00; /* Yellow accent for high visibility */
+
+    color-scheme: dark;
+  }
+
+  :root.nord {
+    /* Nord Theme */
+    --md-sys-color-primary: #88C0D0;
+    --md-sys-color-on-primary: #2E3440;
+    --md-sys-color-primary-container: #81A1C1;
+    --md-sys-color-on-primary-container: #2E3440;
+    
+    --md-sys-color-secondary: #81A1C1;
+    --md-sys-color-on-secondary: #2E3440;
+    --md-sys-color-secondary-container: #5E81AC;
+    --md-sys-color-on-secondary-container: #ECEFF4;
+    
+    --md-sys-color-background: #2E3440;
+    --md-sys-color-on-background: #D8DEE9;
+    
+    --md-sys-color-surface: #2E3440;
+    --md-sys-color-on-surface: #D8DEE9;
+
+    --md-sys-color-surface-variant: #3B4252;
+    --md-sys-color-on-surface-variant: #E5E9F0;
+
+    /* Base colors mapping */
+    --color-primary: var(--md-sys-color-primary);
+    --color-primary-content: var(--md-sys-color-on-primary);
+    --color-secondary: var(--md-sys-color-secondary);
+    --color-base-100: var(--md-sys-color-background);
+    --color-base-content: var(--md-sys-color-on-background);
+    --color-base-200: var(--md-sys-color-surface-variant);
+    --color-base-300: #434C5E;
+    --color-accent: #BF616A;
+
+    color-scheme: dark;
+  }
 }
 
 html {
-  color-scheme: light dark;
+  /* Remove color-scheme: light dark; as we control it via class now */
 }
 
 #root {

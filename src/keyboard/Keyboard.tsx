@@ -31,6 +31,8 @@ import { LockStateContext } from "../rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { deserializeLayoutZoom, LayoutZoom } from "./PhysicalLayout";
 import { useLocalStorageState } from "../misc/useLocalStorageState";
+import { useTranslation } from "react-i18next";
+import { KeycodePanel } from "./KeycodePanel";
 
 type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
 
@@ -159,6 +161,7 @@ function useLayouts(): [
 }
 
 export default function Keyboard() {
+  const { t } = useTranslation();
   const [
     layouts,
     _setLayouts,
@@ -500,11 +503,13 @@ export default function Keyboard() {
     }
   }, [keymap, selectedLayerIndex]);
 
+  const [isAdvancedMode, setIsAdvancedMode] = useState(false);
+
   return (
-    <div className="grid grid-cols-[auto_1fr] grid-rows-[1fr_minmax(10em,auto)] bg-base-300 max-w-full min-w-0 min-h-0">
-      <div className="p-2 flex flex-col gap-2 bg-base-200 row-span-2">
+    <div className="grid grid-cols-[240px_1fr] grid-rows-[1fr] h-full bg-base-300 max-w-full min-w-0 min-h-0 overflow-hidden">
+      <div className="p-3 flex flex-col gap-6 bg-base-200 border-r border-base-300 z-10 overflow-hidden">
         {layouts && (
-          <div className="col-start-3 row-start-1 row-end-2">
+          <div className="shrink-0">
             <PhysicalLayoutPicker
               layouts={layouts}
               selectedPhysicalLayoutIndex={selectedPhysicalLayoutIndex}
@@ -514,64 +519,120 @@ export default function Keyboard() {
         )}
 
         {keymap && (
-          <div className="col-start-1 row-start-1 row-end-2">
-            <LayerPicker
-              layers={keymap.layers}
-              selectedLayerIndex={selectedLayerIndex}
-              onLayerClicked={setSelectedLayerIndex}
-              onLayerMoved={moveLayer}
-              canAdd={(keymap.availableLayers || 0) > 0}
-              canRemove={(keymap.layers?.length || 0) > 1}
-              onAddClicked={addLayer}
-              onRemoveClicked={removeLayer}
-              onLayerNameChanged={changeLayerName}
-            />
-          </div>
+          <LayerPicker
+            layers={keymap.layers}
+            selectedLayerIndex={selectedLayerIndex}
+            onLayerClicked={setSelectedLayerIndex}
+            onLayerMoved={moveLayer}
+            canAdd={(keymap.availableLayers || 0) > 0}
+            canRemove={(keymap.layers?.length || 0) > 1}
+            onAddClicked={addLayer}
+            onRemoveClicked={removeLayer}
+            onLayerNameChanged={changeLayerName}
+          />
         )}
       </div>
-      {layouts && keymap && behaviors && (
-        <div className="p-2 col-start-2 row-start-1 grid items-center justify-center relative min-w-0">
-          <KeymapComp
-            keymap={keymap}
-            layout={layouts[selectedPhysicalLayoutIndex]}
-            behaviors={behaviors}
-            scale={keymapScale}
-            selectedLayerIndex={selectedLayerIndex}
-            selectedKeyPosition={selectedKeyPosition}
-            onKeyPositionClicked={setSelectedKeyPosition}
-          />
-          <select
-            className="absolute top-2 right-2 h-8 rounded px-2"
-            value={keymapScale}
-            onChange={(e) => {
-              const value = deserializeLayoutZoom(e.target.value);
-              setKeymapScale(value);
-            }}
-          >
-            <option value="auto">Auto</option>
-            <option value={0.25}>25%</option>
-            <option value={0.5}>50%</option>
-            <option value={0.75}>75%</option>
-            <option value={1}>100%</option>
-            <option value={1.25}>125%</option>
-            <option value={1.5}>150%</option>
-            <option value={2}>200%</option>
-          </select>
+
+      <div className="flex flex-col min-w-0 min-h-0 overflow-hidden relative">
+        <div className="flex-1 p-6 flex flex-col relative overflow-hidden bg-base-100">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-lg font-bold text-base-content/80 tracking-tight">
+              {layouts?.[selectedPhysicalLayoutIndex]?.name || "Keyboard"}
+            </h2>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center bg-base-100 border border-base-200 hover:border-base-300 rounded-lg px-2 py-0.5 transition-all shadow-sm hover:shadow-md">
+                <select
+                  className="h-6 rounded-md px-1 bg-transparent text-xs font-semibold focus:outline-none cursor-pointer"
+                  value={keymapScale}
+                  onChange={(e) => {
+                    const value = deserializeLayoutZoom(e.target.value);
+                    setKeymapScale(value);
+                  }}
+                >
+                  <option value="auto">{t('keyboard.auto')}</option>
+                  <option value={0.25}>25%</option>
+                  <option value={0.5}>50%</option>
+                  <option value={0.75}>75%</option>
+                  <option value={1}>100%</option>
+                  <option value={1.25}>125%</option>
+                  <option value={1.5}>150%</option>
+                  <option value={2}>200%</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 flex items-center justify-center overflow-visible rounded-3xl bg-base-200/20 p-1">
+            <div className="p-4 bg-base-100/50 rounded-3xl shadow-sm border border-base-200/50 inline-block backdrop-blur-sm">
+            {layouts && keymap && behaviors && (
+              <KeymapComp
+                keymap={keymap}
+                layout={layouts[selectedPhysicalLayoutIndex]}
+                behaviors={behaviors}
+                scale={keymapScale}
+                selectedLayerIndex={selectedLayerIndex}
+                selectedKeyPosition={selectedKeyPosition}
+                onKeyPositionClicked={setSelectedKeyPosition}
+              />
+            )}
+            </div>
+          </div>
         </div>
-      )}
-      {keymap && selectedBinding && (
-        <div className="p-2 col-start-2 row-start-2 bg-base-200">
-          <BehaviorBindingPicker
-            binding={selectedBinding}
-            behaviors={Object.values(behaviors)}
-            layers={keymap.layers.map(({ id, name }, li) => ({
-              id,
-              name: name || li.toLocaleString(),
-            }))}
-            onBindingChanged={doUpdateBinding}
-          />
+
+        <div className="h-[40vh] bg-base-100 border-t border-base-200 flex flex-col shadow-[0_-4px_20px_-4px_rgba(0,0,0,0.1)] z-20 relative">
+          <div className="absolute top-0 left-6 -translate-y-1/2 flex gap-1 bg-base-100 p-1 rounded-full shadow-lg border border-base-200">
+            <button
+              onClick={() => setIsAdvancedMode(false)}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                !isAdvancedMode
+                  ? "bg-primary text-primary-content shadow-sm"
+                  : "text-base-content/60 hover:bg-base-200 hover:text-base-content"
+              }`}
+            >
+              {t('keyboard.simple_mode', 'Simple')}
+            </button>
+            <button
+              onClick={() => setIsAdvancedMode(true)}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                isAdvancedMode
+                  ? "bg-primary text-primary-content shadow-sm"
+                  : "text-base-content/60 hover:bg-base-200 hover:text-base-content"
+              }`}
+            >
+              {t('keyboard.advanced_mode', 'Advanced')}
+            </button>
+          </div>
+
+          <div className="flex-1 min-h-0 pt-6 px-4 pb-4">
+            {isAdvancedMode ? (
+              <div className="h-full bg-base-100 rounded-xl p-6 shadow-sm border border-base-200 overflow-y-auto">
+                {keymap && selectedBinding ? (
+                  <BehaviorBindingPicker
+                    binding={selectedBinding}
+                    behaviors={Object.values(behaviors)}
+                    layers={keymap.layers.map(({ id, name }, li) => ({
+                      id,
+                      name: name || li.toLocaleString(),
+                    }))}
+                    onBindingChanged={doUpdateBinding}
+                  />
+                ) : (
+                  <div className="h-full flex items-center justify-center text-base-content/40 italic">
+                    {t('keyboard.select_key_hint')}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <KeycodePanel
+                behaviors={Object.values(behaviors)}
+                layers={keymap?.layers || []}
+                selectedBinding={selectedBinding}
+                onBindingChanged={doUpdateBinding}
+              />
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

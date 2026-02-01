@@ -1,63 +1,114 @@
 {
-  "common": {
-    "save": "保存",
-    "discard": "放弃",
-    "undo": "撤销",
-    "redo": "重做",
-    "language": "语言",
-    "cancel": "取消",
-    "close": "关闭"
-  },
-  "welcome": {
-    "title": "欢迎使用 ZMK Studio",
-    "selectConnection": "选择连接类型。",
-    "selectDevice": "选择一个设备:",
-    "refresh": "刷新",
-    "unsupportedPrefix": "您的浏览器不受支持。ZMK Studio 使用",
-    "unsupportedMiddle": "或",
-    "unsupportedSuffix": "（仅 Linux）来连接到 ZMK 设备。",
-    "unsupportedOptions": "要使用 ZMK Studio，请执行以下操作之一:",
-    "chromeBrowser": "使用支持上述网络技术的浏览器，例如 Chrome/Edge，或",
-    "downloadAppPrefix": "下载我们的",
-    "crossPlatformApp": "跨平台应用程序"
+  "app": {
+    "title": "Studio"
   },
   "header": {
-    "settings": "设置",
-    "resetSettings": "重置设置",
-    "resetWarning": "重置将移除在 ZMK Studio 中的所有自定义并恢复出厂键位",
-    "continue": "继续吗？",
-    "restoreStock": "恢复出厂设置",
+    "restore_stock_settings": "恢复默认设置",
+    "restore_stock_settings_desc": "重置设置将移除之前在 ZMK Studio 中所做的任何自定义，并恢复默认按键映射",
+    "continue": "继续？",
+    "cancel": "取消",
+    "save": "保存",
+    "discard": "放弃",
     "disconnect": "断开连接",
-    "confirmResetSettings": "您确定要重置所有设置吗？",
-    "unlockRequired": "需要解锁设备才能执行此操作",
-    "studio": "Studio"
+    "undo": "撤销",
+    "redo": "重做",
+    "edit_nickname": "修改昵称",
+    "edit_nickname_desc": "为此设备输入自定义昵称。",
+    "connected": "已连接",
+    "disconnected": "已断开",
+    "settings": "设置"
+  },
+  "theme": {
+    "toggle": "切换主题",
+    "light": "浅色",
+    "dark": "深色",
+    "high_contrast": "高对比度",
+    "nord": "Nord",
+    "system": "跟随系统"
+  },
+  "language": {
+    "toggle": "切换语言",
+    "en": "English",
+    "zh": "中文"
+  },
+  "connect": {
+    "select_device": "选择设备：",
+    "refresh": "刷新",
+    "no_devices": "未发现设备",
+    "connect_others": "其他连接方式：",
+    "browser_not_supported": "您的浏览器不受支持。ZMK Studio 使用 <1>Web Serial</1> 或 <3>Web Bluetooth</3> (仅 Linux) 连接 ZMK 设备。",
+    "to_use": "要使用 ZMK Studio，请：",
+    "use_supported_browser": "使用支持上述 Web 技术的浏览器，例如 Chrome/Edge，或",
+    "download_app": "下载我们的 <1>跨平台应用程序</1>。"
   },
   "footer": {
-    "copyright": "© 2024 - ZMK 贡献者",
+    "copyright": "© {{year}} - ZMK 贡献者",
     "about": "关于 ZMK Studio",
-    "license": "License NOTICE"
+    "license": "许可声明"
   },
   "about": {
     "project": "ZMK 项目：",
-    "website": "网站",
+    "website": "官网",
     "issues": "GitHub 问题",
-    "discord": "Discord 服务器"
+    "discord": "Discord 服务器",
+    "close": "关闭",
+    "sponsorship": "ZMK Studio 的实现得益于贡献者们慷慨的时间捐赠，以及以下供应商的资金赞助："
   },
   "unlock": {
     "title": "解锁以继续",
-    "body1": "出于安全原因，使用 ZMK Studio 前需要先解锁键盘。",
-    "body2Prefix": "如果尚未在键位或组合键中添加解锁，请参阅",
-    "docs": "Studio Unlock Behavior 文档",
-    "body2Suffix": "以获取更多信息。"
+    "desc1": "出于安全原因，您的键盘需要解锁才能使用 ZMK Studio。",
+    "desc2": "如果您的键位映射中尚未添加 Studio 解锁功能或组合键，请参阅 <1>Studio Unlock Behavior</1> 文档了解更多信息。"
+  },
+  "download": {
+    "download_for": "下载 {{name}} 版本",
+    "show_all": "显示所有下载",
+    "hide_all": "隐藏所有下载",
+    "github_releases": "查看 GitHub 发布 →"
   },
   "license": {
-    "intro": "ZMK Studio 以 Apache 2.0 开源许可证发布。此处包含 ZMK Studio 仓库中的 NOTICE 文件："
+    "desc": "ZMK Studio 基于开源 Apache 2.0 许可证发布。此处包含 ZMK Studio 存储库中 NOTICE 文件的副本：",
+    "close": "关闭"
   },
-  "errors": {
-    "failedToConnect": "无法连接到所选设备",
-    "failedFirstRpc": "第一个 RPC 调用失败",
-    "failedToSave": "保存更改失败",
-    "failedToDiscard": "放弃更改失败",
-    "failedToReset": "重置设置失败"
+  "keyboard": {
+    "zoom": "缩放",
+    "auto": "自动",
+    "columns": "列数",
+    "simple_mode": "普通模式",
+    "advanced_mode": "高级模式",
+    "keycode_picker": "键码选择",
+    "select_key_hint": "请选择一个按键进行分配",
+    "search_keycodes": "搜索键码...",
+    "search_results": "搜索结果",
+    "no_results": "未找到相关键码",
+    "category": {
+      "letters": "字母",
+      "numbers": "数字",
+      "symbols": "符号",
+      "f-keys": "功能键",
+      "navigation": "导航",
+      "editing": "编辑",
+      "numpad": "小键盘",
+      "modifiers": "修饰键",
+      "media": "多媒体",
+      "volume": "音量",
+      "system": "系统",
+      "other": "其他",
+      "layers": "图层"
+    }
+  },
+  "keycode": {
+    "desc": {
+      "a": "字母 A", "b": "字母 B", "c": "字母 C", "d": "字母 D", "e": "字母 E", "f": "字母 F", "g": "字母 G", "h": "字母 H", "i": "字母 I", "j": "字母 J", "k": "字母 K", "l": "字母 L", "m": "字母 M", "n": "字母 N", "o": "字母 O", "p": "字母 P", "q": "字母 Q", "r": "字母 R", "s": "字母 S", "t": "字母 T", "u": "字母 U", "v": "字母 V", "w": "字母 W", "x": "字母 X", "y": "字母 Y", "z": "字母 Z",
+      "1": "数字 1", "2": "数字 2", "3": "数字 3", "4": "数字 4", "5": "数字 5", "6": "数字 6", "7": "数字 7", "8": "数字 8", "9": "数字 9", "0": "数字 0",
+      "minus": "减号 (-)", "equal": "等号 (=)", "lbracket": "左中括号 ([)", "rbracket": "右中括号 (])", "backslash": "反斜杠 (\\)", "semicolon": "分号 (;)", "quote": "单引号 (')", "grave": "反引号 (`)", "comma": "逗号 (,)", "period": "句号 (.)", "slash": "斜杠 (/)",
+      "f1": "F1", "f2": "F2", "f3": "F3", "f4": "F4", "f5": "F5", "f6": "F6", "f7": "F7", "f8": "F8", "f9": "F9", "f10": "F10", "f11": "F11", "f12": "F12",
+      "right": "右箭头", "left": "左箭头", "down": "下箭头", "up": "上箭头", "home": "Home", "end": "End", "pgup": "上翻页", "pgdn": "下翻页", "insert": "插入", "delete": "删除",
+      "enter": "回车", "escape": "退出", "backspace": "退格", "tab": "制表符", "space": "空格", "caps": "大写锁定", "prtsc": "截屏", "sclock": "滚动锁定", "pause": "暂停",
+      "numlock": "数字锁定", "kp_divide": "小键盘 /", "kp_multiply": "小键盘 *", "kp_minus": "小键盘 -", "kp_plus": "小键盘 +", "kp_enter": "小键盘回车", "kp_1": "小键盘 1", "kp_2": "小键盘 2", "kp_3": "小键盘 3", "kp_4": "小键盘 4", "kp_5": "小键盘 5", "kp_6": "小键盘 6", "kp_7": "小键盘 7", "kp_8": "小键盘 8", "kp_9": "小键盘 9", "kp_0": "小键盘 0", "kp_dot": "小键盘 .",
+      "lctrl": "左 Ctrl", "lshift": "左 Shift", "lalt": "左 Alt", "lgui": "左 GUI", "rctrl": "右 Ctrl", "rshift": "右 Shift", "ralt": "右 Alt", "rgui": "右 GUI",
+      "play": "播放", "pause_media": "暂停", "next": "下一曲", "prev": "上一曲", "stop": "停止", "play_pause": "播放/暂停",
+      "vol_up": "音量 +", "vol_down": "音量 -", "mute": "静音",
+      "power": "电源关闭", "sleep": "睡眠", "wake": "唤醒"
+    }
   }
 }

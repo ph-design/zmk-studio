@@ -1,20 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { RpcTransport } from "@zmkfirmware/zmk-studio-ts-client/transport/index";
 import { UserCancelledError } from "@zmkfirmware/zmk-studio-ts-client/transport/errors";
 import type { AvailableDevice } from "./tauri/index";
-import { Bluetooth, RefreshCw, Languages } from "lucide-react";
-import {
-  Key,
-  ListBox,
-  ListBoxItem,
-  Selection,
-  Button,
-} from "react-aria-components";
+import { Bluetooth, RefreshCw } from "lucide-react";
+import { Key, ListBox, ListBoxItem, Selection } from "react-aria-components";
 import { useModalRef } from "./misc/useModalRef";
 import { ExternalLink } from "./misc/ExternalLink";
 import { GenericModal } from "./GenericModal";
+import { useTranslation, Trans } from "react-i18next";
 
 export type TransportFactory = {
   label: string;
@@ -97,7 +91,7 @@ function deviceList(
   return (
     <div>
       <div className="grid grid-cols-[1fr_auto]">
-        <label>{t("welcome.selectDevice")}</label>
+        <label>{t('connect.select_device')}</label>
         <button
           className="p-1 rounded hover:bg-base-300 disabled:bg-base-100 disabled:opacity-75"
           disabled={refreshing}
@@ -117,12 +111,13 @@ function deviceList(
         selectionMode="single"
         selectedKeys={selectedDev}
         className="flex flex-col gap-1 pt-1"
+        renderEmptyState={() => <p>{t('connect.no_devices')}</p>}
       >
         {([t, d]) => (
           <ListBoxItem
             className="grid grid-cols-[1em_1fr] rounded hover:bg-base-300 cursor-pointer px-1"
             id={d.id}
-            aria-label={d.label}
+            textValue={d.label}
           >
             {t.isWireless && (
               <Bluetooth className="w-4 justify-center content-center h-full" />
@@ -208,7 +203,7 @@ function simpleDevicePicker(
   ));
   return (
     <div>
-      <p className="text-sm">{t("welcome.selectConnection")}</p>
+      <p className="text-sm">{t('connect.select_device')}</p>
       <ul className="flex gap-2 pt-2">{connections}</ul>
       {selectedTransport && availableDevices && (
         <ul>
@@ -237,23 +232,33 @@ function noTransportsOptionsPrompt() {
   return (
     <div className="m-4 flex flex-col gap-2">
       <p>
-        {t("welcome.unsupportedPrefix")} {" "}
-        <ExternalLink href="https://caniuse.com/web-serial">Web Serial</ExternalLink> {" "}
-        {t("welcome.unsupportedMiddle")} {" "}
-        <ExternalLink href="https://caniuse.com/web-bluetooth">Web Bluetooth</ExternalLink> {" "}
-        {t("welcome.unsupportedSuffix")}
+        <Trans i18nKey="connect.browser_not_supported">
+          Your browser is not supported. ZMK Studio uses either{" "}
+          <ExternalLink href="https://caniuse.com/web-serial">
+            Web Serial
+          </ExternalLink>{" "}
+          or{" "}
+          <ExternalLink href="https://caniuse.com/web-bluetooth">
+            Web Bluetooth
+          </ExternalLink>{" "}
+          (Linux only) to connect to ZMK devices.
+        </Trans>
       </p>
 
       <div>
-        <p>{t("welcome.unsupportedOptions")}</p>
+        <p>{t('connect.to_use')}</p>
         <ul className="list-disc list-inside">
           <li>
-            {t("welcome.chromeBrowser")}
+            {t('connect.use_supported_browser')}
           </li>
           <li>
-            {t("welcome.downloadAppPrefix")} {" "}
-            <ExternalLink href="/download">{t("welcome.crossPlatformApp")}</ExternalLink>
-            .
+            <Trans i18nKey="connect.download_app">
+              Download our{" "}
+              <ExternalLink href="/download">
+                cross platform application
+              </ExternalLink>
+              .
+            </Trans>
           </li>
         </ul>
       </div>
@@ -281,60 +286,14 @@ export const ConnectModal = ({
   transports,
   onTransportCreated,
 }: ConnectModalProps) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const dialog = useModalRef(open || false, false, false);
-  const [langOpen, setLangOpen] = useState(false);
-  const langRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const handleClick = (event: MouseEvent) => {
-      if (langRef.current && !langRef.current.contains(event.target as Node)) {
-        setLangOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
 
   const haveTransports = useMemo(() => transports.length > 0, [transports]);
 
   return (
-    <GenericModal ref={dialog} className="max-w-xl">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-xl">
-          {t("welcome.title")}
-        </h1>
-        <div className="flex-shrink-0 relative" ref={langRef}>
-          <Button
-            className="p-1 rounded hover:bg-base-300 ml-4"
-            onPress={() => setLangOpen((open) => !open)}
-          >
-            <Languages className="w-4" />
-          </Button>
-          {langOpen && (
-            <div className="absolute right-0 mt-1 shadow-lg rounded border border-base-300 bg-base-100 text-base-content overflow-hidden z-50 min-w-32">
-              <button
-                className="w-full text-left px-2 py-1 hover:bg-base-200"
-                onClick={() => {
-                  i18n.changeLanguage("en");
-                  setLangOpen(false);
-                }}
-              >
-                English
-              </button>
-              <button
-                className="w-full text-left px-2 py-1 hover:bg-base-200"
-                onClick={() => {
-                  i18n.changeLanguage("zh");
-                  setLangOpen(false);
-                }}
-              >
-                中文
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+    <GenericModal ref={dialog} className="max-w-xl p-6 rounded-2xl bg-base-100 shadow-xl">
+      <h1 className="text-2xl font-medium mb-4">{t('app.title')}</h1>
       {haveTransports
         ? connectOptions(transports, onTransportCreated, open)
         : noTransportsOptionsPrompt()}
