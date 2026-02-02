@@ -125,7 +125,8 @@ export const AppHeader = ({
         <Tooltip label={t("common.language")}>
           <MenuTrigger>
             <Button
-              className="flex items-center justify-center p-1.5 rounded hover:bg-base-300"
+              isDisabled={!connectionState.conn}
+              className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
             >
               <Languages className="inline-block w-4" aria-label="Language" />
             </Button>
