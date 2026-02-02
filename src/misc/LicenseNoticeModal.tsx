@@ -34,7 +34,7 @@ export const LicenseNoticeModal = ({
             {t("common.close")}
           </button>
         </div>
-        <pre className="m-4 font-mono text-xs">{NOTICE}</pre>
+        <pre className="m-4 font-mono text-sm">{NOTICE}</pre>
       </div>
     </GenericModal>
   );
