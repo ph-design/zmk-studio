@@ -6,6 +6,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio_serial::{available_ports, SerialPortBuilderExt, SerialPortType};
 
 use tauri::{command, AppHandle, State};
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 use tauri_plugin_cli::CliExt;
 
 const READ_BUF_SIZE: usize = 1024;
@@ -85,18 +86,21 @@ pub async fn serial_list_devices(app_handle: AppHandle) -> Result<Vec<super::com
         })
         .collect::<Vec<_>>();
 
-    match app_handle.cli().matches() {
-        Ok(m) => {
-            if let Some(p) = m.args.get("serial-port") {
-                if let serde_json::Value::String(path) = &p.value {
-                    candidates.push(super::commands::AvailableDevice {
-                        id: path.to_string(),
-                        label: format!("CLI Port: {path}").to_string(),
-                    })
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        match app_handle.cli().matches() {
+            Ok(m) => {
+                if let Some(p) = m.args.get("serial-port") {
+                    if let serde_json::Value::String(path) = &p.value {
+                        candidates.push(super::commands::AvailableDevice {
+                            id: path.to_string(),
+                            label: format!("CLI Port: {path}").to_string(),
+                        })
+                    }
                 }
-            }
-        },
-        Err(_) => {},
+            },
+            Err(_) => {},
+        }
     }
 
     Ok(candidates)

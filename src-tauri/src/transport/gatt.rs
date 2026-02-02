@@ -6,6 +6,7 @@ use futures::{StreamExt, TryFutureExt};
 use std::time::Duration;
 use uuid::Uuid;
 
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 use bluest::{Adapter, ConnectionEvent, Device, DeviceId};
 
 use tauri::{command, AppHandle, State};
@@ -13,6 +14,7 @@ use tauri::{command, AppHandle, State};
 const SVC_UUID: Uuid = Uuid::from_u128(0x00000000_0196_6107_c967_c5cfb1c2482a);
 const RPC_CHRC_UUID: Uuid = Uuid::from_u128(0x00000001_0196_6107_c967_c5cfb1c2482a);
 
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[command]
 pub async fn gatt_connect(
     id: String,
@@ -102,22 +104,37 @@ pub async fn gatt_connect(
     }
 }
 
-#[cfg(target_os = "macos")]
-async fn check_connected(adapter: &Adapter, device: &Device) -> bool {
-    if let Ok(()) = adapter.connect_device(&device).await {
-        true
-    } else {
-        false
-    }
+// Mobile stub: GATT not supported yet on Android/iOS — return an explanatory error.
+#[cfg(any(target_os = "android", target_os = "ios"))]
+#[command]
+pub async fn gatt_connect(
+    _id: String,
+    _app_handle: AppHandle,
+    _state: State<'_, super::commands::ActiveConnection<'_>>,
+) -> Result<bool, String> {
+    Err("Bluetooth GATT is not supported in the mobile prototype build".to_string())
 }
 
-#[cfg(not(target_os = "macos"))]
-async fn check_connected(_: &Adapter, device: &Device) -> bool {
-    device.is_connected().await
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+async fn check_connected(adapter: &Adapter, device: &Device) -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        if let Ok(()) = adapter.connect_device(&device).await {
+            true
+        } else {
+            false
+        }
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        device.is_connected().await
+    }
 }
 
 const ADAPTER_TIMEOUT: Duration = Duration::from_secs(2);
 
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[command]
 pub async fn gatt_list_devices() -> Result<Vec<super::commands::AvailableDevice>, ()> {
     let adapter = Adapter::default()
@@ -155,4 +172,11 @@ pub async fn gatt_list_devices() -> Result<Vec<super::commands::AvailableDevice>
     }
 
     Ok(ret)
+}
+
+// Mobile stub: return empty device list — BLE not supported in mobile prototype.
+#[cfg(any(target_os = "android", target_os = "ios"))]
+#[command]
+pub async fn gatt_list_devices() -> Result<Vec<super::commands::AvailableDevice>, ()> {
+    Ok(Vec::new())
 }

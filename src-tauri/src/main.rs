@@ -12,8 +12,12 @@ use transport::gatt::{gatt_connect, gatt_list_devices};
 use transport::serial::{serial_connect, serial_list_devices};
 
 fn main() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_cli::init())
+    let mut builder = tauri::Builder::default();
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        builder = builder.plugin(tauri_plugin_cli::init());
+    }
+    builder
         .manage(ActiveConnection {
             conn: Mutex::new(None),
         })
