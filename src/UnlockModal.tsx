@@ -21,12 +21,12 @@ export type TransportFactory = {
 
 export interface UnlockModalProps {}
 
-export const UnlockModal = ({}: UnlockModalProps) => {
+export const UnlockModal = (_props: UnlockModalProps) => {
   const { t } = useTranslation();
-  let conn = useContext(ConnectionContext);
-  let lockState = useContext(LockStateContext);
+  const conn = useContext(ConnectionContext);
+  const lockState = useContext(LockStateContext);
 
-  let open = useMemo(
+  const open = useMemo(
     () =>
       !!conn.conn && lockState != LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED,
     [conn, lockState]

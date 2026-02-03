@@ -4,6 +4,9 @@ import {
   MenuItem,
   MenuTrigger,
   Popover,
+  Section,
+  Header,
+  Separator,
 } from "react-aria-components";
 import { useConnectedDeviceData } from "./rpc/useConnectedDeviceData";
 import { useSub } from "./usePubSub";
@@ -12,11 +15,11 @@ import { useModalRef } from "./misc/useModalRef";
 import { LockStateContext } from "./rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { ConnectionContext } from "./rpc/ConnectionContext";
-import { ChevronDown, Undo2, Redo2, Save, Trash2, Sun, Moon, Monitor, Languages, Contrast, Snowflake } from "lucide-react";
+import { ChevronDown, Undo2, Redo2, Save, Trash2, Settings, Sun, Moon, Monitor, Languages, Contrast, Snowflake } from "lucide-react";
 import { Tooltip } from "./misc/Tooltip";
 import { GenericModal } from "./GenericModal";
 import { useTranslation } from "react-i18next";
-import { useTheme } from "./contexts/ThemeContext";
+import { useTheme, Theme } from "./contexts/ThemeContext";
 
 export interface AppHeaderProps {
   connectedDeviceLabel?: string;
@@ -231,49 +234,68 @@ export const AppHeader = ({
           </Button>
         </Tooltip>
 
-        <div className="w-px h-6 bg-base-300 mx-2"></div>
+        <div className="w-px h-6 bg-base-300 mx-1"></div>
 
         <MenuTrigger>
-          <Button aria-label={t('language.toggle')} className="p-2 rounded-full hover:bg-base-200 transition-colors">
-            <Languages className="w-5 h-5" />
+          <Button aria-label={t('header.settings')} className="p-2 rounded-full hover:bg-base-200 transition-colors">
+            <Settings className="w-5 h-5" />
           </Button>
           <Popover>
-            <Menu className="min-w-[150px] shadow-lg rounded-xl bg-base-100 text-base-content p-2 border border-base-200" onAction={(key) => i18n.changeLanguage(key as string)}>
-              <MenuItem id="en" className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-base-200 cursor-pointer outline-none">
-                 {t('language.en')}
-              </MenuItem>
-              <MenuItem id="zh" className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-base-200 cursor-pointer outline-none">
-                 {t('language.zh')}
-              </MenuItem>
-            </Menu>
-          </Popover>
-        </MenuTrigger>
+            <Menu
+              onAction={(key) => {
+                if (key === 'en' || key === 'zh') {
+                  i18n.changeLanguage(key);
+                } else {
+                  setTheme(key as Theme);
+                }
+              }}
+              className="min-w-[220px] shadow-lg rounded-xl bg-base-100 text-base-content p-2 border border-base-200 outline-none"
+            >
+              <Section className="flex flex-col gap-1">
+                <Header className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-base-content/40 flex items-center gap-2">
+                  <Languages className="w-3.5 h-3.5" /> {t('language.toggle')}
+                </Header>
+                <MenuItem
+                  id="en"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-base-200 cursor-pointer outline-none text-sm transition-colors"
+                >
+                  {t('language.en')}
+                </MenuItem>
+                <MenuItem
+                  id="zh"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-base-200 cursor-pointer outline-none text-sm transition-colors"
+                >
+                  {t('language.zh')}
+                </MenuItem>
+              </Section>
 
-        <MenuTrigger>
-          <Button aria-label={t('theme.toggle')} className="p-2 rounded-full hover:bg-base-200 transition-colors">
-            {theme === 'light' ? <Sun className="w-5 h-5" /> : 
-             theme === 'dark' ? <Moon className="w-5 h-5" /> : 
-             theme === 'high-contrast-dark' ? <Contrast className="w-5 h-5" /> :
-             theme === 'nord' ? <Snowflake className="w-5 h-5" /> :
-             <Monitor className="w-5 h-5" />}
-          </Button>
-          <Popover>
-            <Menu className="min-w-[180px] shadow-lg rounded-xl bg-base-100 text-base-content p-2 border border-base-200" onAction={(key) => setTheme(key as any)}>
-              <MenuItem id="light" className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-base-200 cursor-pointer outline-none">
-                <Sun className="w-4 h-4" /> {t('theme.light')}
-              </MenuItem>
-              <MenuItem id="dark" className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-base-200 cursor-pointer outline-none">
-                <Moon className="w-4 h-4" /> {t('theme.dark')}
-              </MenuItem>
-              <MenuItem id="high-contrast-dark" className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-base-200 cursor-pointer outline-none">
-                <Contrast className="w-4 h-4" /> {t('theme.high_contrast')}
-              </MenuItem>
-              <MenuItem id="nord" className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-base-200 cursor-pointer outline-none">
-                <Snowflake className="w-4 h-4" /> {t('theme.nord')}
-              </MenuItem>
-              <MenuItem id="system" className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-base-200 cursor-pointer outline-none">
-                <Monitor className="w-4 h-4" /> {t('theme.system')}
-              </MenuItem>
+              <Separator className="h-px bg-base-200 my-2 mx-1" />
+
+              <Section className="flex flex-col gap-1">
+                <Header className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-base-content/40 flex items-center gap-2">
+                  {theme === 'light' ? <Sun className="w-3.5 h-3.5" /> : 
+                   theme === 'dark' ? <Moon className="w-3.5 h-3.5" /> : 
+                   theme === 'high-contrast-dark' ? <Contrast className="w-3.5 h-3.5" /> :
+                   theme === 'nord' ? <Snowflake className="w-3.5 h-3.5" /> :
+                   <Monitor className="w-3.5 h-3.5" />}
+                  {t('theme.toggle')}
+                </Header>
+                <MenuItem id="light" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-base-200 cursor-pointer outline-none text-sm transition-colors">
+                  <Sun className="w-4 h-4 opacity-70" /> {t('theme.light')}
+                </MenuItem>
+                <MenuItem id="dark" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-base-200 cursor-pointer outline-none text-sm transition-colors">
+                  <Moon className="w-4 h-4 opacity-70" /> {t('theme.dark')}
+                </MenuItem>
+                <MenuItem id="high-contrast-dark" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-base-200 cursor-pointer outline-none text-sm transition-colors">
+                  <Contrast className="w-4 h-4 opacity-70" /> {t('theme.high_contrast')}
+                </MenuItem>
+                <MenuItem id="nord" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-base-200 cursor-pointer outline-none text-sm transition-colors">
+                  <Snowflake className="w-4 h-4 opacity-70" /> {t('theme.nord')}
+                </MenuItem>
+                <MenuItem id="system" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-base-200 cursor-pointer outline-none text-sm transition-colors">
+                  <Monitor className="w-4 h-4 opacity-70" /> {t('theme.system')}
+                </MenuItem>
+              </Section>
             </Menu>
           </Popover>
         </MenuTrigger>

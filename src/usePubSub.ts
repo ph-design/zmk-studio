@@ -3,12 +3,14 @@ import { useEffect } from "react";
 
 const emitter = new Emittery();
 
-export const usePub = () => (name: PropertyKey, data: any) =>
+export const pub = (name: PropertyKey, data?: unknown) =>
   emitter.emit(name, data);
 
-export const useSub = (
+export const usePub = () => pub;
+
+export const useSub = <T = unknown>(
   name: PropertyKey,
-  callback: (data: any) => void | Promise<void>
+  callback: (data: T) => void | Promise<void>
 ) => {
   const unsub = () => emitter.off(name, callback);
 

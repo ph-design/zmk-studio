@@ -2,6 +2,15 @@ import { PropsWithChildren } from "react";
 import BehaviorShortNames from "./behavior-short-names.json";
 import { HidUsageLabel } from "./HidUsageLabel";
 
+export interface LayerBinding {
+  layerIndex: number;
+  layerName: string;
+  behaviorDisplayName: string;
+  binding?: {
+    param1: number;
+  };
+}
+
 interface KeyProps {
   selected?: boolean;
   width: number;
@@ -9,7 +18,7 @@ interface KeyProps {
   oneU: number;
   header?: string;
   onClick?: () => void;
-  layerBindings?: any[];
+  layerBindings?: LayerBinding[];
   previewMode?: boolean;
 }
 
@@ -79,7 +88,7 @@ export const Key = ({
       {layerBindings && layerBindings.length > 0 && (
         <div className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 bg-base-300 text-base-content text-xs p-2 rounded-lg shadow-xl border border-base-content/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100] w-auto min-w-[120px] hidden group-hover:block">
           <div className="flex flex-col gap-1 max-h-48 overflow-hidden">
-            {layerBindings.map((lb: any) => (
+            {layerBindings.map((lb) => (
               <div key={lb.layerIndex} className="flex items-center text-[10px] gap-1">
                 <span className="opacity-70 text-[9px] uppercase tracking-wide whitespace-nowrap">{lb.layerName}:</span>
                 <span className="font-bold text-primary truncate flex gap-1">

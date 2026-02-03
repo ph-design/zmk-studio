@@ -80,7 +80,7 @@ const PlatformLinks: Record<Platform, DownloadLink[]> = {
   unknown: [],
 };
 
-const ReleaseAssets = releaseData.assets.map((asset: any) => asset.browser_download_url);
+const ReleaseAssets = releaseData.assets.map((asset: { browser_download_url: string }) => asset.browser_download_url);
 const ReleaseVersion = releaseData.tag_name;
 
 function detectPlatform(): Platform {

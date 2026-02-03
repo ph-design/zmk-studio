@@ -5,7 +5,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Key } from "./Key";
+import { Key, LayerBinding } from "./Key";
 
 export type KeyPosition = PropsWithChildren<{
   id: string;
@@ -17,7 +17,7 @@ export type KeyPosition = PropsWithChildren<{
   r?: number;
   rx?: number;
   ry?: number;
-  layerBindings?: any[];
+  layerBindings?: LayerBinding[];
 }>;
 
 export type LayoutZoom = number | "auto";
@@ -51,15 +51,15 @@ function scalePosition(
   { x, y, r, rx, ry }: PhysicalLayoutPositionLocation,
   oneU: number,
 ): CSSProperties {
-  let left = x * oneU;
-  let top = y * oneU;
+  const left = x * oneU;
+  const top = y * oneU;
   let transformOrigin = undefined;
   let transform = undefined;
   const transformStyle = "preserve-3d";
 
   if (r) {
-    let transformX = ((rx || x) - x) * oneU;
-    let transformY = ((ry || y) - y) * oneU;
+    const transformX = ((rx || x) - x) * oneU;
+    const transformY = ((ry || y) - y) * oneU;
     transformOrigin = `${transformX}px ${transformY}px`;
     transform = `rotate(${r}deg)`;
   }
@@ -119,10 +119,10 @@ export const PhysicalLayout = ({
   }, [props.zoom]);
 
   // TODO: Add a bit of padding for rotation when supported
-  let rightMost = positions
+  const rightMost = positions
     .map((k) => k.x + k.width)
     .reduce((a, b) => Math.max(a, b), 0);
-  let bottomMost = positions
+  const bottomMost = positions
     .map((k) => k.y + k.height)
     .reduce((a, b) => Math.max(a, b), 0);
 
