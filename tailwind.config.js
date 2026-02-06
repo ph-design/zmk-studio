@@ -1,36 +1,58 @@
 /** @type {import('tailwindcss').Config} */
-import trac from "tailwindcss-react-aria-components";
-import contQueries from "@tailwindcss/container-queries";
-
 export default {
-  content: ["./index.html", "./download.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
   theme: {
-    fontSize: {
-      xs: "0.4rem",
-    },
     extend: {
-      fontFamily: {
-        sans: ["Inter", "system-ui"],
-      },
       colors: {
-        primary:
-          "light-dark(oklch(49.12% 0.3096 285.75), oklch(65.69% 0.196 285.75))",
-        "primary-content":
-          "light-dark(oklch(0.89824 0.06192 285.75), oklch(0.13138 0.0392 285.75))",
-        secondary:
-          "light-dark(oklch(69.71% 0.329 342.55), oklch(74.8% 0.26 342.55))",
-        accent:
-          "light-dark(oklch(76.76% 0.184 183.61), oklch(74.51% 0.167 183.61))",
-        "base-content": "light-dark(#1f2937, #A6ADBB)",
-        "base-100": "light-dark(oklch(100% 0 0), #1d232a)",
-        "base-200": "light-dark(#F2F2F2, #191e24)",
-        "base-300": "light-dark(#E5E6E6, #15191e)",
+        border: "hsl(var(--border) / <alpha-value>)",
+        input: "hsl(var(--input) / <alpha-value>)",
+        ring: "hsl(var(--ring) / <alpha-value>)",
+        background: "hsl(var(--background) / <alpha-value>)",
+        foreground: "hsl(var(--foreground) / <alpha-value>)",
+        primary: {
+          DEFAULT: "hsl(var(--primary) / <alpha-value>)",
+          foreground: "hsl(var(--primary-foreground) / <alpha-value>)",
+          content: "hsl(var(--primary-content) / <alpha-value>)",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary) / <alpha-value>)",
+          foreground: "hsl(var(--secondary-foreground) / <alpha-value>)",
+          content: "hsl(var(--secondary-content) / <alpha-value>)",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive) / <alpha-value>)",
+          foreground: "hsl(var(--destructive-foreground) / <alpha-value>)",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted) / <alpha-value>)",
+          foreground: "hsl(var(--muted-foreground) / <alpha-value>)",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent) / <alpha-value>)",
+          foreground: "hsl(var(--accent-foreground) / <alpha-value>)",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover) / <alpha-value>)",
+          foreground: "hsl(var(--popover-foreground) / <alpha-value>)",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card) / <alpha-value>)",
+          foreground: "hsl(var(--card-foreground) / <alpha-value>)",
+        },
+        // Custom mappings for our UI
+        "base-100": "hsl(var(--base-100) / <alpha-value>)",
+        "base-200": "hsl(var(--base-200) / <alpha-value>)",
+        "base-300": "hsl(var(--base-300) / <alpha-value>)",
+        "base-content": "hsl(var(--base-content) / <alpha-value>)",
       },
-    },
-
-    fontFamily: {
-      keycap: ["Inter", "system-ui"],
     },
   },
-  plugins: [contQueries, trac({ prefix: "rac" })],
-};
+  plugins: [
+    require("tailwindcss-react-aria-components"),
+    require("tailwindcss-animate"),
+  ],
+}
+

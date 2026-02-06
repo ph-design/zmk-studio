@@ -1,9 +1,7 @@
-import { AppHeader } from "./AppHeader";
-import i18n from "./i18n";
-import { I18nextProvider, useTranslation } from "react-i18next";
-
 import { create_rpc_connection } from "@zmkfirmware/zmk-studio-ts-client";
 import { call_rpc } from "./rpc/logging";
+import i18n from "./i18n";
+import { I18nextProvider, useTranslation } from "react-i18next";
 
 import type { Notification } from "@zmkfirmware/zmk-studio-ts-client/studio";
 import { ConnectionState, ConnectionContext } from "./rpc/ConnectionContext";
@@ -26,11 +24,11 @@ import { UndoRedoContext, useUndoRedo } from "./undoRedo";
 import { usePub, useSub } from "./usePubSub";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { LockStateContext } from "./rpc/LockStateContext";
-import { UnlockModal } from "./UnlockModal";
+// import { UnlockModal } from "./UnlockModal"; // Removed, replaced by SystemPanel bubble
 import { valueAfter } from "./misc/async";
-import { AppFooter } from "./AppFooter";
 import { AboutModal } from "./AboutModal";
 import { LicenseNoticeModal } from "./misc/LicenseNoticeModal";
+import { ConnectCard } from "./ui/ConnectCard";
 
 declare global {
   interface Window {
@@ -45,26 +43,26 @@ const TRANSPORTS: TransportFactory[] = [
     : []),
   ...(window.__TAURI_INTERNALS__
     ? [
-        {
-          label: "BLE",
-          isWireless: true,
-          pick_and_connect: {
-            connect: tauri_ble_connect,
-            list: ble_list_devices,
-          },
+      {
+        label: "BLE",
+        isWireless: true,
+        pick_and_connect: {
+          connect: tauri_ble_connect,
+          list: ble_list_devices,
         },
-      ]
+      },
+    ]
     : []),
   ...(window.__TAURI_INTERNALS__
     ? [
-        {
-          label: "USB",
-          pick_and_connect: {
-            connect: tauri_serial_connect,
-            list: serial_list_devices,
-          },
+      {
+        label: "USB",
+        pick_and_connect: {
+          connect: tauri_serial_connect,
+          list: serial_list_devices,
         },
-      ]
+      },
+    ]
     : []),
 ].filter((t) => t !== undefined);
 
@@ -198,46 +196,24 @@ function App() {
 
       setLockState(
         locked_resp.core?.getLockState ||
-          LockState.ZMK_STUDIO_CORE_LOCK_STATE_LOCKED
+        LockState.ZMK_STUDIO_CORE_LOCK_STATE_LOCKED
       );
     }
 
     updateLockState();
   }, [conn, setLockState]);
 
-  const save = useCallback(() => {
-    async function doSave() {
+
+  const disconnect = useCallback(() => {
+    async function doDisconnect() {
       if (!conn.conn) {
         return;
       }
-
-      let resp = await call_rpc(conn.conn, { keymap: { saveChanges: true } });
-      if (!resp.keymap?.saveChanges || resp.keymap?.saveChanges.err) {
-        console.error(t("errors.failedToSave"), resp.keymap?.saveChanges);
-      }
+      await conn.conn.request_writable.close();
+      connectionAbort.abort("User disconnected");
+      setConnectionAbort(new AbortController());
     }
-
-    doSave();
-  }, [conn]);
-
-  const discard = useCallback(() => {
-    async function doDiscard() {
-      if (!conn.conn) {
-        return;
-      }
-
-      let resp = await call_rpc(conn.conn, {
-        keymap: { discardChanges: true },
-      });
-      if (!resp.keymap?.discardChanges) {
-        console.error(t("errors.failedToDiscard"), resp);
-      }
-
-      reset();
-      setConn({ conn: conn.conn });
-    }
-
-    doDiscard();
+    doDisconnect();
   }, [conn]);
 
   const resetSettings = useCallback(() => {
@@ -245,40 +221,40 @@ function App() {
       if (!conn.conn) {
         return;
       }
-
       let resp = await call_rpc(conn.conn, {
         core: { resetSettings: true },
       });
       if (!resp.core?.resetSettings) {
         console.error(t("errors.failedToReset"), resp);
       }
-
       reset();
       setConn({ conn: conn.conn });
     }
-
     doReset();
   }, [conn]);
 
-  const disconnect = useCallback(() => {
-    async function doDisconnect() {
-      if (!conn.conn) {
-        return;
-      }
+  useEffect(() => {
+    const handleDisconnect = () => disconnect();
+    const handleReset = () => resetSettings();
 
-      await conn.conn.request_writable.close();
-      connectionAbort.abort("User disconnected");
-      setConnectionAbort(new AbortController());
-    }
+    window.addEventListener('zmk-studio-disconnect', handleDisconnect);
+    window.addEventListener('zmk-studio-reset-settings', handleReset);
 
-    doDisconnect();
-  }, [conn]);
+    return () => {
+      window.removeEventListener('zmk-studio-disconnect', handleDisconnect);
+      window.removeEventListener('zmk-studio-reset-settings', handleReset);
+    };
+  }, [disconnect, resetSettings]);
+
+
+  const [showConnectModal, setShowConnectModal] = useState(false);
 
   const onConnect = useCallback(
     (t: RpcTransport) => {
       const ac = new AbortController();
       setConnectionAbort(ac);
       connect(t, setConn, setConnectedDeviceName, ac.signal);
+      setShowConnectModal(false);
     },
     [setConn, setConnectedDeviceName, setConnectedDeviceName]
   );
@@ -288,34 +264,39 @@ function App() {
       <ConnectionContext.Provider value={conn}>
         <LockStateContext.Provider value={lockState}>
           <UndoRedoContext.Provider value={doIt}>
-            <UnlockModal />
-            <ConnectModal
-              open={!conn.conn}
-              transports={TRANSPORTS}
-              onTransportCreated={onConnect}
-            />
-            <AboutModal open={showAbout} onClose={() => setShowAbout(false)} />
-            <LicenseNoticeModal
-              open={showLicenseNotice}
-              onClose={() => setShowLicenseNotice(false)}
-            />
-            <div className="bg-base-100 text-base-content h-full max-h-[100vh] w-full max-w-[100vw] inline-grid grid-cols-[auto] grid-rows-[auto_1fr_auto] overflow-hidden">
-              <AppHeader
-                connectedDeviceLabel={connectedDeviceName}
-                canUndo={canUndo}
-                canRedo={canRedo}
-                onUndo={undo}
-                onRedo={redo}
-                onSave={save}
-                onDiscard={discard}
-                onDisconnect={disconnect}
-                onResetSettings={resetSettings}
+            <div className="relative w-full h-full bg-base-100 overflow-hidden font-sans text-base-content selection:bg-primary selection:text-primary-content">
+              {/* <UnlockModal />  -- Replaced by Popover in SystemPanel */}
+              <ConnectModal
+                open={showConnectModal}
+                transports={TRANSPORTS}
+                onTransportCreated={onConnect}
+                onClose={() => setShowConnectModal(false)}
               />
-              <Keyboard />
-              <AppFooter
-                onShowAbout={() => setShowAbout(true)}
-                onShowLicenseNotice={() => setShowLicenseNotice(true)}
+              <AboutModal open={showAbout} onClose={() => setShowAbout(false)} />
+              <LicenseNoticeModal
+                open={showLicenseNotice}
+                onClose={() => setShowLicenseNotice(false)}
               />
+
+              {conn.conn && (
+                <div className="absolute inset-0 z-0">
+                  <Keyboard />
+                </div>
+              )}
+
+              {!conn.conn && (
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-base-100 transition-all duration-500">
+                  <ConnectCard
+                    transports={TRANSPORTS}
+                    onTransportCreated={onConnect}
+                    onConnectCommon={() => setShowConnectModal(true)}
+                  />
+                  <div className="absolute bottom-4 text-xs text-base-content/20 font-mono">
+                    ZMK Studio v{import.meta.env.PACKAGE_VERSION || "Dev"}
+                  </div>
+                </div>
+              )}
+
             </div>
           </UndoRedoContext.Provider>
         </LockStateContext.Provider>

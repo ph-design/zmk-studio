@@ -17,22 +17,13 @@ interface BehaviorShortName {
 const MAX_HEADER_LENGTH = 9;
 const shortNames: Record<string, BehaviorShortName> = BehaviorShortNames;
 
-const shortenHeader = (header: string | undefined) => {
-  if(typeof header === "undefined"){
-    return "";
-  }
-  // Empty string is a valid header for behaviors where we don't want to see a header, which is falsy
-  // So we use an undefined check here
-  if(typeof shortNames[header]?.short !== "undefined"){
-    return shortNames[header].short;
-  } else if(header.length > MAX_HEADER_LENGTH){
-    const words = header.split(/[\s,-]+/);
-    const lettersPerWord = Math.trunc(MAX_HEADER_LENGTH / words.length);
-    return words.map((word) => (word.substring(0,lettersPerWord))).join("");
-  } else {
-    return header;
-  }
-}
+// Hide "Key Press" and "Transparent" as they are the default/implied states and create visual noise.
+const formatHeader = (header: string | undefined) => {
+  if (typeof header === "undefined") return "";
+  if (header === "Key Press" || header === "&kp" || header === "Transparent" || header === "&trans") return "";
+
+  return header;
+};
 
 export const Key = ({
   selected = false,
@@ -46,18 +37,65 @@ export const Key = ({
   const pixelWidth = width * oneU - 2;
   const pixelHeight = height * oneU - 2;
 
+  // Determine font size based on text length to prevent overflow
+  // When header is hidden (headerText is empty), we can afford a slightly larger font for the main keycode
+  const headerText = formatHeader(header);
+  const contentLength = typeof children === 'string' ? children.length : 0;
+
+  // Reduced base font sizes as requested
+  let fontSizeClass = "text-[10px]"; // Default small
+  if (!headerText) {
+    // Clean keys (no header) get slightly larger but still contained text
+    fontSizeClass = "text-xs font-bold";
+  }
+
+  // Auto-scale down for long labels
+  if (contentLength > 5) fontSizeClass = "text-[10px]";
+  if (contentLength > 8) fontSizeClass = "text-[9px] leading-tight";
+
   return (
     <button
-      className={`group rounded relative flex justify-center items-center cursor-pointer transition-all hover:shadow-xl hover:ring-1 hover:ring-gray-300 hover:scale-125 ${selected ? "bg-primary text-primary-content" : "bg-base-100 text-base-content"
-        }`}
+      // Removed scale transforms to fix overlap issues.
+      // Simplified z-index: Selected is elevated (z-10), Hover is elevated (z-20) to ensure tooltips/borders clarify.
+      // rounded-lg (8px) instead of rounded-xl (12px) for a slightly sharper look
+      className={`
+          group relative flex flex-col justify-center items-center cursor-pointer transition-colors duration-200
+          rounded-lg border shadow-sm overflow-hidden select-none outline-none
+          ${selected
+          ? "bg-primary text-primary-content border-primary z-10 shadow-md"
+          : "bg-base-200 text-base-content border-base-300 hover:border-primary/50 hover:bg-base-300 z-0 hover:z-20 hover:shadow-md"
+        }
+        `}
       style={{
         width: `${pixelWidth}px`,
         height: `${pixelHeight}px`,
       }}
       onClick={onClick}
     >
-      <div className={`absolute text-xs ${selected ? "text-primary-content" : "z1text-base-content"} opacity-80 top-1 text-nowrap left-1/2 font-light -translate-x-1/2 text-center`}>{shortenHeader(header)}</div>
-      {children}
+      {/* Header - Only shown for "interesting" behaviors like Mod-Tap, Layers, etc. */}
+      {headerText && (
+        <div className={`
+                absolute top-1 left-1.5 right-1.5 
+                text-[9px] font-bold opacity-60 truncate text-left
+                ${selected ? "text-primary-content" : "text-base-content"} 
+            `}>
+          {headerText}
+        </div>
+      )}
+
+      {/* Main Center Content */}
+      <div className={`
+            flex-1 flex items-center justify-center font-bold px-1 text-center w-full break-words
+            ${fontSizeClass}
+            ${headerText ? 'pt-3' : ''} 
+        `}>
+        {children}
+      </div>
+
+      {/* Selection Indicator Bar - Kept as the primary selection cue */}
+      {selected && (
+        <div className="absolute inset-x-3 bottom-1.5 h-0.5 bg-primary-content/30 rounded-full" />
+      )}
     </button>
   );
 };

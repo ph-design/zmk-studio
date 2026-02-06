@@ -1,577 +1,415 @@
-import React, {
-  SetStateAction,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-
-import { Request } from "@zmkfirmware/zmk-studio-ts-client";
+import { useCallback, useEffect, useMemo, useState, useContext } from "react";
+import { useTranslation } from "react-i18next";
 import { call_rpc } from "../rpc/logging";
-import {
-  PhysicalLayout,
-  Keymap,
-  SetLayerBindingResponse,
-  SetLayerPropsResponse,
-  BehaviorBinding,
-  Layer,
-} from "@zmkfirmware/zmk-studio-ts-client/keymap";
-import type { GetBehaviorDetailsResponse } from "@zmkfirmware/zmk-studio-ts-client/behaviors";
-
-import { LayerPicker } from "./LayerPicker";
-import { PhysicalLayoutPicker } from "./PhysicalLayoutPicker";
+import { produce } from "immer";
 import { Keymap as KeymapComp } from "./Keymap";
+import { PhysicalLayoutPicker } from "./PhysicalLayoutPicker";
+import { Keymap, SetLayerBindingResponse, BehaviorBinding, Layer } from "@zmkfirmware/zmk-studio-ts-client/keymap";
+import type { GetBehaviorDetailsResponse } from "@zmkfirmware/zmk-studio-ts-client/behaviors";
+import { BehaviorBindingPicker } from "../behaviors/BehaviorBindingPicker";
+import { UndoRedoContext } from "../undoRedo";
+import { LayersPanel } from "../ui/LayersPanel";
+import { DevicePanel } from "../ui/DevicePanel";
+import { SystemPanel } from "../ui/SystemPanel";
+import { BehaviorDrawer } from "../ui/BehaviorDrawer";
 import { useConnectedDeviceData } from "../rpc/useConnectedDeviceData";
 import { ConnectionContext } from "../rpc/ConnectionContext";
-import { UndoRedoContext } from "../undoRedo";
-import { BehaviorBindingPicker } from "../behaviors/BehaviorBindingPicker";
-import { produce } from "immer";
 import { LockStateContext } from "../rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
-import { deserializeLayoutZoom, LayoutZoom } from "./PhysicalLayout";
-import { useLocalStorageState } from "../misc/useLocalStorageState";
+import { useSub } from "../usePubSub";
 
-type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
-
-function useBehaviors(): BehaviorMap {
-  let connection = useContext(ConnectionContext);
-  let lockState = useContext(LockStateContext);
-
-  const [behaviors, setBehaviors] = useState<BehaviorMap>({});
-
-  useEffect(() => {
-    if (
-      !connection.conn ||
-      lockState != LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED
-    ) {
-      setBehaviors({});
-      return;
-    }
-
-    async function startRequest() {
-      setBehaviors({});
-
-      if (!connection.conn) {
-        return;
-      }
-
-      let get_behaviors: Request = {
-        behaviors: { listAllBehaviors: true },
-        requestId: 0,
-      };
-
-      let behavior_list = await call_rpc(connection.conn, get_behaviors);
-      if (!ignore) {
-        let behavior_map: BehaviorMap = {};
-        for (let behaviorId of behavior_list.behaviors?.listAllBehaviors
-          ?.behaviors || []) {
-          if (ignore) {
-            break;
-          }
-          let details_req = {
-            behaviors: { getBehaviorDetails: { behaviorId } },
-            requestId: 0,
-          };
-          let behavior_details = await call_rpc(connection.conn, details_req);
-          let dets: GetBehaviorDetailsResponse | undefined =
-            behavior_details?.behaviors?.getBehaviorDetails;
-
-          if (dets) {
-            behavior_map[dets.id] = dets;
-          }
-        }
-
-        if (!ignore) {
-          setBehaviors(behavior_map);
-        }
-      }
-    }
-
-    let ignore = false;
-    startRequest();
-
-    return () => {
-      ignore = true;
-    };
-  }, [connection, lockState]);
-
-  return behaviors;
-}
-
-function useLayouts(): [
-  PhysicalLayout[] | undefined,
-  React.Dispatch<SetStateAction<PhysicalLayout[] | undefined>>,
-  number,
-  React.Dispatch<SetStateAction<number>>
-] {
-  let connection = useContext(ConnectionContext);
-  let lockState = useContext(LockStateContext);
-
-  const [layouts, setLayouts] = useState<PhysicalLayout[] | undefined>(
-    undefined
-  );
-  const [selectedPhysicalLayoutIndex, setSelectedPhysicalLayoutIndex] =
-    useState<number>(0);
-
-  useEffect(() => {
-    if (
-      !connection.conn ||
-      lockState != LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED
-    ) {
-      setLayouts(undefined);
-      return;
-    }
-
-    async function startRequest() {
-      setLayouts(undefined);
-
-      if (!connection.conn) {
-        return;
-      }
-
-      let response = await call_rpc(connection.conn, {
-        keymap: { getPhysicalLayouts: true },
-      });
-
-      if (!ignore) {
-        setLayouts(response?.keymap?.getPhysicalLayouts?.layouts);
-        setSelectedPhysicalLayoutIndex(
-          response?.keymap?.getPhysicalLayouts?.activeLayoutIndex || 0
-        );
-      }
-    }
-
-    let ignore = false;
-    startRequest();
-
-    return () => {
-      ignore = true;
-    };
-  }, [connection, lockState]);
-
-  return [
-    layouts,
-    setLayouts,
-    selectedPhysicalLayoutIndex,
-    setSelectedPhysicalLayoutIndex,
-  ];
-}
 
 export default function Keyboard() {
-  const [
-    layouts,
-    _setLayouts,
-    selectedPhysicalLayoutIndex,
-    setSelectedPhysicalLayoutIndex,
-  ] = useLayouts();
-  const [keymap, setKeymap] = useConnectedDeviceData<Keymap>(
-    { keymap: { getKeymap: true } },
-    (keymap) => {
-      console.log("Got the keymap!");
-      return keymap?.keymap?.getKeymap;
-    },
-    true
-  );
+    const { t } = useTranslation();
+    const conn = useContext(ConnectionContext);
+    const doIt = useContext(UndoRedoContext);
+    const lockState = useContext(LockStateContext);
 
-  const [keymapScale, setKeymapScale] = useLocalStorageState<LayoutZoom>("keymapScale", "auto", {
-    deserialize: deserializeLayoutZoom,
-  });
+    // Unsaved Changes State
+    const [unsaved, setUnsaved] = useConnectedDeviceData<boolean>(
+        { keymap: { checkUnsavedChanges: true } },
+        (r) => r.keymap?.checkUnsavedChanges,
+        false // Default to false to avoid initial popup
+    );
 
-  const [selectedLayerIndex, setSelectedLayerIndex] = useState<number>(0);
-  const [selectedKeyPosition, setSelectedKeyPosition] = useState<
-    number | undefined
-  >(undefined);
-  const behaviors = useBehaviors();
+    useSub("rpc_notification.keymap.unsavedChangesStatusChanged", (status) =>
+        setUnsaved(status)
+    );
 
-  const conn = useContext(ConnectionContext);
-  const undoRedo = useContext(UndoRedoContext);
+    const [layoutsData] = useConnectedDeviceData<any>(
+        { keymap: { getPhysicalLayouts: true } },
+        (r) => r.keymap?.getPhysicalLayouts,
+        true
+    );
+    const layouts = layoutsData?.layouts;
 
-  useEffect(() => {
-    setSelectedLayerIndex(0);
-    setSelectedKeyPosition(undefined);
-  }, [conn]);
+    const [keymap, setKeymap] = useConnectedDeviceData<Keymap>(
+        { keymap: { getKeymap: true } },
+        (r) => r.keymap?.getKeymap,
+        true
+    );
 
-  useEffect(() => {
-    async function performSetRequest() {
-      if (!conn.conn || !layouts) {
-        return;
-      }
+    // --- Behaviors Loading Logic ---
+    const [behaviors, setBehaviors] = useState<Record<number, GetBehaviorDetailsResponse>>({});
 
-      let resp = await call_rpc(conn.conn, {
-        keymap: { setActivePhysicalLayout: selectedPhysicalLayoutIndex },
-      });
+    useEffect(() => {
+        let ignore = false;
+        async function loadBehaviors() {
+            if (!conn.conn) return;
 
-      let new_keymap = resp?.keymap?.setActivePhysicalLayout?.ok;
-      if (new_keymap) {
-        setKeymap(new_keymap);
-      } else {
-        console.error(
-          "Failed to set the active physical layout err:",
-          resp?.keymap?.setActivePhysicalLayout?.err
-        );
-      }
-    }
+            // 1. List all behavior IDs
+            const listResp = await call_rpc(conn.conn, { behaviors: { listAllBehaviors: true } });
+            const ids = listResp.behaviors?.listAllBehaviors?.behaviors;
 
-    performSetRequest();
-  }, [selectedPhysicalLayoutIndex]);
+            if (!ids || ignore) return;
 
-  let doSelectPhysicalLayout = useCallback(
-    (i: number) => {
-      let oldLayout = selectedPhysicalLayoutIndex;
-      undoRedo?.(async () => {
-        setSelectedPhysicalLayoutIndex(i);
-
-        return async () => {
-          setSelectedPhysicalLayoutIndex(oldLayout);
-        };
-      });
-    },
-    [undoRedo, selectedPhysicalLayoutIndex]
-  );
-
-  let doUpdateBinding = useCallback(
-    (binding: BehaviorBinding) => {
-      if (!keymap || selectedKeyPosition === undefined) {
-        console.error(
-          "Can't update binding without a selected key position and loaded keymap"
-        );
-        return;
-      }
-
-      const layer = selectedLayerIndex;
-      const layerId = keymap.layers[layer].id;
-      const keyPosition = selectedKeyPosition;
-      const oldBinding = keymap.layers[layer].bindings[keyPosition];
-      undoRedo?.(async () => {
-        if (!conn.conn) {
-          throw new Error("Not connected");
-        }
-
-        let resp = await call_rpc(conn.conn, {
-          keymap: { setLayerBinding: { layerId, keyPosition, binding } },
-        });
-
-        if (
-          resp.keymap?.setLayerBinding ===
-          SetLayerBindingResponse.SET_LAYER_BINDING_RESP_OK
-        ) {
-          setKeymap(
-            produce((draft: any) => {
-              draft.layers[layer].bindings[keyPosition] = binding;
-            })
-          );
-        } else {
-          console.error("Failed to set binding", resp.keymap?.setLayerBinding);
-        }
-
-        return async () => {
-          if (!conn.conn) {
-            return;
-          }
-
-          let resp = await call_rpc(conn.conn, {
-            keymap: {
-              setLayerBinding: { layerId, keyPosition, binding: oldBinding },
-            },
-          });
-          if (
-            resp.keymap?.setLayerBinding ===
-            SetLayerBindingResponse.SET_LAYER_BINDING_RESP_OK
-          ) {
-            setKeymap(
-              produce((draft: any) => {
-                draft.layers[layer].bindings[keyPosition] = oldBinding;
-              })
+            // 2. Fetch details for each behavior
+            const promises = ids.map(id =>
+                call_rpc(conn.conn!, { behaviors: { getBehaviorDetails: { behaviorId: id } } })
+                    .then(r => r.behaviors?.getBehaviorDetails)
             );
-          } else {
-          }
-        };
-      });
-    },
-    [conn, keymap, undoRedo, selectedLayerIndex, selectedKeyPosition]
-  );
 
-  let selectedBinding = useMemo(() => {
-    if (keymap == null || selectedKeyPosition == null || !keymap.layers[selectedLayerIndex]) {
-      return null;
-    }
+            const results = await Promise.all(promises);
 
-    return keymap.layers[selectedLayerIndex].bindings[selectedKeyPosition];
-  }, [keymap, selectedLayerIndex, selectedKeyPosition]);
+            if (ignore) return;
 
-  const moveLayer = useCallback(
-    (start: number, end: number) => {
-      const doMove = async (startIndex: number, destIndex: number) => {
-        if (!conn.conn) {
-          return;
+            const newBehaviors: Record<number, GetBehaviorDetailsResponse> = {};
+            results.forEach(b => {
+                if (b) newBehaviors[b.id] = b;
+            });
+
+            console.log("Loaded Behaviors:", Object.keys(newBehaviors).length);
+            setBehaviors(newBehaviors);
         }
 
-        let resp = await call_rpc(conn.conn, {
-          keymap: { moveLayer: { startIndex, destIndex } },
-        });
-
-        if (resp.keymap?.moveLayer?.ok) {
-          setKeymap(resp.keymap?.moveLayer?.ok);
-          setSelectedLayerIndex(destIndex);
+        // Load behaviors when connected or unlocked
+        if (conn.conn && lockState === LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED) {
+            loadBehaviors();
         } else {
-          console.error("Error moving", resp);
-        }
-      };
-
-      undoRedo?.(async () => {
-        await doMove(start, end);
-        return () => doMove(end, start);
-      });
-    },
-    [undoRedo]
-  );
-
-  const addLayer = useCallback(() => {
-    async function doAdd(): Promise<number> {
-      if (!conn.conn || !keymap) {
-        throw new Error("Not connected");
-      }
-
-      const resp = await call_rpc(conn.conn, { keymap: { addLayer: {} } });
-
-      if (resp.keymap?.addLayer?.ok) {
-        const newSelection = keymap.layers.length;
-        setKeymap(
-          produce((draft: any) => {
-            draft.layers.push(resp.keymap!.addLayer!.ok!.layer);
-            draft.availableLayers--;
-          })
-        );
-
-        setSelectedLayerIndex(newSelection);
-
-        return resp.keymap.addLayer.ok.index;
-      } else {
-        console.error("Add error", resp.keymap?.addLayer?.err);
-        throw new Error("Failed to add layer:" + resp.keymap?.addLayer?.err);
-      }
-    }
-
-    async function doRemove(layerIndex: number) {
-      if (!conn.conn) {
-        throw new Error("Not connected");
-      }
-
-      const resp = await call_rpc(conn.conn, {
-        keymap: { removeLayer: { layerIndex } },
-      });
-
-      console.log(resp);
-      if (resp.keymap?.removeLayer?.ok) {
-        setKeymap(
-          produce((draft: any) => {
-            draft.layers.splice(layerIndex, 1);
-            draft.availableLayers++;
-          })
-        );
-      } else {
-        console.error("Remove error", resp.keymap?.removeLayer?.err);
-        throw new Error(
-          "Failed to remove layer:" + resp.keymap?.removeLayer?.err
-        );
-      }
-    }
-
-    undoRedo?.(async () => {
-      let index = await doAdd();
-      return () => doRemove(index);
-    });
-  }, [conn, undoRedo, keymap]);
-
-  const removeLayer = useCallback(() => {
-    async function doRemove(layerIndex: number): Promise<void> {
-      if (!conn.conn || !keymap) {
-        throw new Error("Not connected");
-      }
-
-      const resp = await call_rpc(conn.conn, {
-        keymap: { removeLayer: { layerIndex } },
-      });
-
-      if (resp.keymap?.removeLayer?.ok) {
-        if (layerIndex == keymap.layers.length - 1) {
-          setSelectedLayerIndex(layerIndex - 1);
-        }
-        setKeymap(
-          produce((draft: any) => {
-            draft.layers.splice(layerIndex, 1);
-            draft.availableLayers++;
-          })
-        );
-      } else {
-        console.error("Remove error", resp.keymap?.removeLayer?.err);
-        throw new Error(
-          "Failed to remove layer:" + resp.keymap?.removeLayer?.err
-        );
-      }
-    }
-
-    async function doRestore(layerId: number, atIndex: number) {
-      if (!conn.conn) {
-        throw new Error("Not connected");
-      }
-
-      const resp = await call_rpc(conn.conn, {
-        keymap: { restoreLayer: { layerId, atIndex } },
-      });
-
-      console.log(resp);
-      if (resp.keymap?.restoreLayer?.ok) {
-        setKeymap(
-          produce((draft: any) => {
-            draft.layers.splice(atIndex, 0, resp!.keymap!.restoreLayer!.ok);
-            draft.availableLayers--;
-          })
-        );
-        setSelectedLayerIndex(atIndex);
-      } else {
-        console.error("Remove error", resp.keymap?.restoreLayer?.err);
-        throw new Error(
-          "Failed to restore layer:" + resp.keymap?.restoreLayer?.err
-        );
-      }
-    }
-
-    if (!keymap) {
-      throw new Error("No keymap loaded");
-    }
-
-    let index = selectedLayerIndex;
-    let layerId = keymap.layers[index].id;
-    undoRedo?.(async () => {
-      await doRemove(index);
-      return () => doRestore(layerId, index);
-    });
-  }, [conn, undoRedo, selectedLayerIndex]);
-
-  const changeLayerName = useCallback(
-    (id: number, oldName: string, newName: string) => {
-      async function changeName(layerId: number, name: string) {
-        if (!conn.conn) {
-          throw new Error("Not connected");
+            setBehaviors({});
         }
 
-        const resp = await call_rpc(conn.conn, {
-          keymap: { setLayerProps: { layerId, name } },
-        });
+        return () => { ignore = true; };
+    }, [conn.conn, lockState]);
 
+
+    const [selectedPhysicalLayoutIndex, setSelectedPhysicalLayoutIndex] = useState(0);
+    const [selectedLayerIndex, setSelectedLayerIndex] = useState(0);
+    const [selectedKeyPosition, setSelectedKeyPosition] = useState<number | undefined>(undefined);
+
+    // Device Info for Panel
+    const [deviceInfo] = useConnectedDeviceData<any>(
+        { core: { getDeviceInfo: true } },
+        (r) => r.core?.getDeviceInfo
+    );
+
+    const selectedBinding = useMemo(() => {
         if (
-          resp.keymap?.setLayerProps ==
-          SetLayerPropsResponse.SET_LAYER_PROPS_RESP_OK
+            !keymap ||
+            selectedLayerIndex >= keymap.layers.length ||
+            selectedKeyPosition === undefined
         ) {
-          setKeymap(
-            produce((draft: any) => {
-              const layer_index = draft.layers.findIndex(
-                (l: Layer) => l.id == layerId
-              );
-              draft.layers[layer_index].name = name;
-            })
-          );
-        } else {
-          throw new Error(
-            "Failed to change layer name:" + resp.keymap?.setLayerProps
-          );
+            return undefined;
         }
-      }
 
-      undoRedo?.(async () => {
-        await changeName(id, newName);
-        return async () => {
-          await changeName(id, oldName);
-        };
-      });
-    },
-    [conn, undoRedo, keymap]
-  );
+        return keymap.layers[selectedLayerIndex].bindings[selectedKeyPosition];
+    }, [keymap, selectedLayerIndex, selectedKeyPosition]);
 
-  useEffect(() => {
-    if (!keymap?.layers) return;
+    const doSelectPhysicalLayout = useCallback(
+        (index: number) => {
+            setSelectedKeyPosition(undefined);
+            setSelectedPhysicalLayoutIndex(index);
+        },
+        [setSelectedKeyPosition, setSelectedPhysicalLayoutIndex]
+    );
 
-    const layers = keymap.layers.length - 1;
+    const doUpdateBinding = useCallback(
+        (binding: BehaviorBinding) => {
+            async function updateBinding(
+                layerId: number,
+                keyPosition: number,
+                binding: BehaviorBinding,
+                layerIdx: number
+            ) {
+                if (!conn.conn) return;
 
-    if (selectedLayerIndex > layers) {
-      setSelectedLayerIndex(layers);
-    }
-  }, [keymap, selectedLayerIndex]);
+                const resp = await call_rpc(conn.conn, {
+                    keymap: { setLayerBinding: { layerId, keyPosition, binding } },
+                });
 
-  return (
-    <div className="grid grid-cols-[auto_1fr] grid-rows-[1fr_minmax(10em,auto)] bg-base-300 max-w-full min-w-0 min-h-0">
-      <div className="p-2 flex flex-col gap-2 bg-base-200 row-span-2">
-        {layouts && (
-          <div className="col-start-3 row-start-1 row-end-2">
-            <PhysicalLayoutPicker
-              layouts={layouts}
-              selectedPhysicalLayoutIndex={selectedPhysicalLayoutIndex}
-              onPhysicalLayoutClicked={doSelectPhysicalLayout}
-            />
-          </div>
-        )}
+                if (resp.keymap?.setLayerBinding === SetLayerBindingResponse.SET_LAYER_BINDING_RESP_OK) {
+                    setKeymap(
+                        produce((draft: any) => {
+                            if (draft) draft.layers[layerIdx].bindings[keyPosition] = binding;
+                        })
+                    );
+                    // Optimistically set unsaved to true when binding changes
+                    setUnsaved(true);
+                }
+            }
 
-        {keymap && (
-          <div className="col-start-1 row-start-1 row-end-2">
-            <LayerPicker
-              layers={keymap.layers}
-              selectedLayerIndex={selectedLayerIndex}
-              onLayerClicked={setSelectedLayerIndex}
-              onLayerMoved={moveLayer}
-              canAdd={(keymap.availableLayers || 0) > 0}
-              canRemove={(keymap.layers?.length || 0) > 1}
-              onAddClicked={addLayer}
-              onRemoveClicked={removeLayer}
-              onLayerNameChanged={changeLayerName}
-            />
-          </div>
-        )}
-      </div>
-      {layouts && keymap && behaviors && (
-        <div className="p-2 col-start-2 row-start-1 grid items-center justify-center relative min-w-0">
-          <KeymapComp
-            keymap={keymap}
-            layout={layouts[selectedPhysicalLayoutIndex]}
-            behaviors={behaviors}
-            scale={keymapScale}
-            selectedLayerIndex={selectedLayerIndex}
-            selectedKeyPosition={selectedKeyPosition}
-            onKeyPositionClicked={setSelectedKeyPosition}
-          />
-          <select
-            className="absolute top-2 right-2 h-8 rounded px-2"
-            value={keymapScale}
-            onChange={(e) => {
-              const value = deserializeLayoutZoom(e.target.value);
-              setKeymapScale(value);
-            }}
-          >
-            <option value="auto">Auto</option>
-            <option value={0.25}>25%</option>
-            <option value={0.5}>50%</option>
-            <option value={0.75}>75%</option>
-            <option value={1}>100%</option>
-            <option value={1.25}>125%</option>
-            <option value={1.5}>150%</option>
-            <option value={2}>200%</option>
-          </select>
+            if (selectedKeyPosition === undefined || !keymap) return;
+
+            const layerIdx = selectedLayerIndex;
+            const layerId = keymap.layers[layerIdx].id;
+            const keyPosition = selectedKeyPosition;
+            const oldBinding = keymap.layers[layerIdx].bindings[keyPosition];
+
+            doIt?.(async () => {
+                await updateBinding(layerId, keyPosition, binding, layerIdx);
+                return () => updateBinding(layerId, keyPosition, oldBinding, layerIdx);
+            });
+        },
+        [conn, doIt, keymap, selectedLayerIndex, selectedKeyPosition, setKeymap, setUnsaved]
+    );
+
+    const addLayer = useCallback(() => {
+        async function doAddLayer(): Promise<number> {
+            if (!conn.conn || !keymap) throw new Error("Not connected");
+            const resp = await call_rpc(conn.conn, { keymap: { addLayer: {} } });
+            if (resp.keymap?.addLayer?.ok) {
+                const newLayer = resp.keymap.addLayer.ok.layer;
+                const index = resp.keymap.addLayer.ok.index;
+                setKeymap(produce((draft: any) => {
+                    if (draft) {
+                        draft.layers.push(newLayer);
+                        draft.availableLayers--;
+                    }
+                }));
+                setSelectedLayerIndex(index);
+                setUnsaved(true);
+                return index;
+            }
+            throw new Error("Failed to add layer");
+        }
+
+        async function doRemoveLayer(layerIdx: number) {
+            if (!conn.conn) return;
+            await call_rpc(conn.conn, { keymap: { removeLayer: { layerIndex: layerIdx } } });
+            setKeymap(produce((draft: any) => {
+                if (draft) {
+                    draft.layers.splice(layerIdx, 1);
+                    draft.availableLayers++;
+                }
+            }));
+        }
+
+        doIt?.(async () => {
+            const idx = await doAddLayer();
+            return () => doRemoveLayer(idx);
+        });
+    }, [conn, doIt, keymap, setKeymap, setUnsaved]);
+
+    const removeLayer = useCallback((layerIdx: number) => {
+        async function doRemoveLayer(idx: number): Promise<Layer> {
+            if (!conn.conn || !keymap) throw new Error("Not connected");
+            const layer = keymap.layers[idx];
+            const resp = await call_rpc(conn.conn, { keymap: { removeLayer: { layerIndex: idx } } });
+            if (resp.keymap?.removeLayer?.ok) {
+                setKeymap(produce((draft: any) => {
+                    if (draft) {
+                        draft.layers.splice(idx, 1);
+                        draft.availableLayers++;
+                    }
+                }));
+                setUnsaved(true);
+                return layer;
+            }
+            throw new Error("Failed to remove layer");
+        }
+
+        async function doRestoreLayer(layerId: number, atIndex: number) {
+            if (!conn.conn) return;
+            const resp = await call_rpc(conn.conn, { keymap: { restoreLayer: { layerId, atIndex } } });
+            if (resp.keymap?.restoreLayer?.ok) {
+                setKeymap(produce((draft: any) => {
+                    if (draft) {
+                        draft.layers.splice(atIndex, 0, resp.keymap!.restoreLayer!.ok);
+                        draft.availableLayers--;
+                    }
+                }));
+            }
+        }
+
+        if (!keymap) return;
+        const layerId = keymap.layers[layerIdx].id;
+        doIt?.(async () => {
+            await doRemoveLayer(layerIdx);
+            return () => doRestoreLayer(layerId, layerIdx);
+        });
+    }, [conn, doIt, keymap, setKeymap, setUnsaved]);
+
+    const changeLayerName = useCallback((layerIdx: number, name: string) => {
+        async function doSetName(idx: number, newName: string) {
+            if (!conn.conn || !keymap) return;
+            const layerId = keymap.layers[idx].id;
+            await call_rpc(conn.conn, { keymap: { setLayerProps: { layerId, name: newName } } });
+            setKeymap(produce((draft: any) => {
+                if (draft) draft.layers[idx].name = newName;
+            }));
+            setUnsaved(true);
+        }
+
+        if (!keymap) return;
+        const oldName = keymap.layers[layerIdx].name || "";
+        doIt?.(async () => {
+            await doSetName(layerIdx, name);
+            return () => doSetName(layerIdx, oldName);
+        });
+    }, [conn, doIt, keymap, setKeymap, setUnsaved]);
+
+    const moveLayer = useCallback((startIndex: number, destIndex: number) => {
+        async function doMoveLayer(s: number, d: number) {
+            if (!conn.conn) return;
+            const resp = await call_rpc(conn.conn, { keymap: { moveLayer: { startIndex: s, destIndex: d } } });
+            if (resp.keymap?.moveLayer?.ok) {
+                setKeymap(resp.keymap.moveLayer.ok);
+                setSelectedLayerIndex(d);
+                setUnsaved(true);
+            }
+        }
+        doIt?.(async () => {
+            await doMoveLayer(startIndex, destIndex);
+            return () => doMoveLayer(destIndex, startIndex);
+        });
+    }, [conn, doIt, setKeymap, setUnsaved]);
+
+    useEffect(() => {
+        if (!keymap?.layers) return;
+        if (selectedLayerIndex >= keymap.layers.length) {
+            setSelectedLayerIndex(Math.max(0, keymap.layers.length - 1));
+        }
+    }, [keymap, selectedLayerIndex]);
+
+    const dispatchDisconnect = () => window.dispatchEvent(new CustomEvent('zmk-studio-disconnect'));
+    const dispatchReset = () => window.dispatchEvent(new CustomEvent('zmk-studio-reset-settings'));
+
+    // --- Handlers for Save/Discard ---
+    // We manually optimistically update unsaved state to false to provide immediate UI feedback.
+    // The backend will eventually send a notification (or we'll refetch), but this feels snappier.
+    const handleSave = async () => {
+        await conn.conn?.keymap?.saveChanges();
+        setUnsaved(false);
+    };
+
+    const handleDiscard = async () => {
+        if (!conn.conn) return;
+
+        // 1. Force UI into loading state (clear keymap)
+        // This gives distinct visual feedback that a "Reset" is occurring
+        // AND ensures that when we setKeymap later, it's a fresh render
+        setKeymap(undefined as any);
+
+        // 2. Tell device to revert to last saved state
+        await conn.conn.keymap?.discardChanges();
+
+        // 3. Wait ample time for device to reload from flash
+        await new Promise(resolve => setTimeout(resolve, 600));
+
+        // 4. Explicitly re-fetch the keymap data
+        const result = await call_rpc(conn.conn, { keymap: { getKeymap: true } });
+        if (result.keymap?.getKeymap) {
+            console.log("Keymap reverted successfully, UI updated.");
+            setKeymap(result.keymap.getKeymap);
+        }
+
+        setUnsaved(false);
+    };
+
+
+    return (
+        <div className="flex w-full h-full bg-base-100 overflow-hidden text-base-content font-sans selection:bg-primary selection:text-primary-content">
+
+            {/* Sidebar Area - MD3 Surface Container Low (base-200) */}
+            <aside className="w-80 flex flex-col bg-base-200 relative z-30 shadow-xl">
+                <DevicePanel
+                    deviceName={deviceInfo?.name || "ZMK Keyboard"}
+                    transportLabel="USB"
+                    onDisconnect={dispatchDisconnect}
+                    onResetSettings={dispatchReset}
+                />
+
+                <div className="flex-1 min-h-0 overflow-hidden">
+                    {keymap && (
+                        <LayersPanel
+                            layers={keymap.layers}
+                            selectedLayerIndex={selectedLayerIndex}
+                            onLayerClicked={setSelectedLayerIndex}
+                            canAdd={(keymap.availableLayers || 0) > 0}
+                            onAddClicked={addLayer}
+                            onRemoveClicked={removeLayer}
+                            onRenameLayer={changeLayerName}
+                            onMoveLayer={moveLayer}
+                        />
+                    )}
+                    {!keymap && (
+                        <div className="p-6 text-center opacity-50 text-sm flex flex-col items-center gap-2">
+                            <span className="loading loading-spinner text-primary"></span>
+                            <span>Loading Layers...</span>
+                        </div>
+                    )}
+                </div>
+
+                <SystemPanel
+                    unsaved={unsaved}
+                    locked={lockState !== LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED}
+                    onSave={handleSave}
+                    onDiscard={handleDiscard}
+                />
+            </aside>
+
+            {/* Main Canvas Area */}
+            <main className="flex-1 relative bg-base-100 overflow-hidden flex flex-col">
+                <div className="flex-1 relative flex items-center justify-center p-10">
+                    {layouts && keymap && behaviors ? (
+                        <KeymapComp
+                            keymap={keymap}
+                            layout={layouts[selectedPhysicalLayoutIndex]}
+                            behaviors={behaviors}
+                            scale="auto"
+                            selectedLayerIndex={selectedLayerIndex}
+                            selectedKeyPosition={selectedKeyPosition}
+                            onKeyPositionClicked={setSelectedKeyPosition}
+                        />
+                    ) : (
+                        <div className="flex flex-col items-center gap-4 text-base-content/20 animate-pulse">
+                            <span className="loading loading-spinner loading-lg text-primary"></span>
+                            <span className="font-bold tracking-widest text-sm">Now Loading...</span>
+                        </div>
+                    )}
+
+                    {layouts && layouts.length > 1 && (
+                        <div className="absolute bottom-8 z-20">
+                            <div className="surface-panel p-2 flex items-center gap-2 shadow-lg backdrop-blur-md bg-base-200/80">
+                                <span className="text-[10px] uppercase tracking-widest text-base-content/40 px-2 font-bold">{t("Model")}</span>
+                                <PhysicalLayoutPicker
+                                    layouts={layouts}
+                                    selectedPhysicalLayoutIndex={selectedPhysicalLayoutIndex}
+                                    onPhysicalLayoutClicked={doSelectPhysicalLayout}
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </main>
+
+            <BehaviorDrawer
+                isOpen={selectedKeyPosition !== undefined}
+                onClose={() => setSelectedKeyPosition(undefined)}
+                title="Edit Binding"
+            >
+                {keymap && behaviors && selectedBinding && (
+                    <BehaviorBindingPicker
+                        binding={selectedBinding}
+                        behaviors={Object.values(behaviors)}
+                        layers={keymap.layers.map(({ id, name }, li: number) => ({
+                            id,
+                            name: name || li.toLocaleString(),
+                        }))}
+                        onBindingChanged={doUpdateBinding}
+                    />
+                )}
+            </BehaviorDrawer>
         </div>
-      )}
-      {keymap && selectedBinding && (
-        <div className="p-2 col-start-2 row-start-2 bg-base-200">
-          <BehaviorBindingPicker
-            binding={selectedBinding}
-            behaviors={Object.values(behaviors)}
-            layers={keymap.layers.map(({ id, name }, li) => ({
-              id,
-              name: name || li.toLocaleString(),
-            }))}
-            onBindingChanged={doUpdateBinding}
-          />
-        </div>
-      )}
-    </div>
-  );
+    );
 }

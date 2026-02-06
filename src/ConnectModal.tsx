@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { RpcTransport } from "@zmkfirmware/zmk-studio-ts-client/transport/index";
 import { UserCancelledError } from "@zmkfirmware/zmk-studio-ts-client/transport/errors";
 import type { AvailableDevice } from "./tauri/index";
-import { Bluetooth, RefreshCw, Languages } from "lucide-react";
+import { Bluetooth, RefreshCw, Languages, X } from "lucide-react";
 import {
   Key,
   ListBox,
@@ -30,6 +30,7 @@ export interface ConnectModalProps {
   open?: boolean;
   transports: TransportFactory[];
   onTransportCreated: (t: RpcTransport) => void;
+  onClose?: () => void;
 }
 
 function deviceList(
@@ -104,9 +105,8 @@ function deviceList(
           onClick={onRefresh}
         >
           <RefreshCw
-            className={`size-5 transition-transform ${
-              refreshing ? "animate-spin" : ""
-            }`}
+            className={`size-5 transition-transform ${refreshing ? "animate-spin" : ""
+              }`}
           />
         </button>
       </div>
@@ -280,9 +280,12 @@ export const ConnectModal = ({
   open,
   transports,
   onTransportCreated,
+  onClose,
 }: ConnectModalProps) => {
   const { t, i18n } = useTranslation();
-  const dialog = useModalRef(open || false, false, false);
+  // Allow closing via Esc to notify parent, although useModalRef handles the DOM dialog close.
+  // We use useModalRef's closeOnEscape=true only if we have onClose, to avoid closing the persistent modal.
+  const dialog = useModalRef(open || false, !!onClose, !!onClose);
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement | null>(null);
 
@@ -299,39 +302,50 @@ export const ConnectModal = ({
   const haveTransports = useMemo(() => transports.length > 0, [transports]);
 
   return (
-    <GenericModal ref={dialog} className="max-w-xl">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-xl">
+    <GenericModal ref={dialog} className="max-w-xl" onClose={onClose}>
+      <div className="flex items-center justify-between gap-4 mb-4">
+        <h1 className="text-xl font-bold">
           {t("welcome.title")}
         </h1>
-        <div className="flex-shrink-0 relative" ref={langRef}>
-          <Button
-            className="p-1 rounded hover:bg-base-300 ml-4"
-            onPress={() => setLangOpen((open) => !open)}
-          >
-            <Languages className="w-4" />
-          </Button>
-          {langOpen && (
-            <div className="absolute right-0 mt-1 shadow-lg rounded border border-base-300 bg-base-100 text-base-content overflow-hidden z-50 min-w-32">
-              <button
-                className="w-full text-left px-2 py-1 hover:bg-base-200"
-                onClick={() => {
-                  i18n.changeLanguage("en");
-                  setLangOpen(false);
-                }}
-              >
-                English
-              </button>
-              <button
-                className="w-full text-left px-2 py-1 hover:bg-base-200"
-                onClick={() => {
-                  i18n.changeLanguage("zh");
-                  setLangOpen(false);
-                }}
-              >
-                中文
-              </button>
-            </div>
+        <div className="flex items-center gap-2">
+          <div className="relative" ref={langRef}>
+            <Button
+              className="p-2 rounded-full hover:bg-base-300 transition-colors"
+              onPress={() => setLangOpen((open) => !open)}
+            >
+              <Languages className="w-5 h-5" />
+            </Button>
+            {langOpen && (
+              <div className="absolute right-0 mt-2 shadow-xl rounded-xl border border-base-200 bg-base-100/90 backdrop-blur-md overflow-hidden z-50 min-w-[120px] py-1">
+                <button
+                  className="w-full text-left px-4 py-2 hover:bg-primary/10 hover:text-primary text-sm transition-colors"
+                  onClick={() => {
+                    i18n.changeLanguage("en");
+                    setLangOpen(false);
+                  }}
+                >
+                  English
+                </button>
+                <button
+                  className="w-full text-left px-4 py-2 hover:bg-primary/10 hover:text-primary text-sm transition-colors"
+                  onClick={() => {
+                    i18n.changeLanguage("zh");
+                    setLangOpen(false);
+                  }}
+                >
+                  中文
+                </button>
+              </div>
+            )}
+          </div>
+
+          {onClose && (
+            <Button
+              className="p-2 rounded-full hover:bg-base-300 transition-colors text-base-content/70 hover:text-red-500"
+              onPress={onClose}
+            >
+              <X className="w-5 h-5" />
+            </Button>
           )}
         </div>
       </div>
