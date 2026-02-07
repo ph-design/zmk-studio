@@ -10,5 +10,8 @@
     "Sticky Key": {"short": "Stcky Key"},
     "Studio Unlock": {"short": "Unlock"},
     "Toggle Layer": {"short": "Togg Layr"},
-    "Transparent": {"short": "Transprnt"}
+    "Mod-Tap": {"short": ""},
+    "Layer-Tap": {"short": ""},
+    "None": {"short": ""},
+    "Transparent": {"short": ""}
 }
