@@ -1,4 +1,4 @@
-import { Layers, Plus, GripVertical, Trash2, Edit2, Check, X } from "lucide-react";
+import { MdLayers, MdAdd, MdDragIndicator, MdDelete, MdEdit, MdCheck, MdClose } from "react-icons/md";
 import { Button, TextField, Input } from "react-aria-components";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -72,13 +72,14 @@ const SortableLayerItem = ({
         <div
             ref={setNodeRef}
             style={style}
+            onClick={() => !isEditing && onLayerClicked(index)}
             // MD3: Active Indicator Shape (rounded-full), now using Primary for color!
             className={`
                 group relative min-h-[56px] rounded-full transition-all duration-200
-                flex items-center gap-4 px-4
+                flex items-center gap-4 px-4 border border-base-content/20 cursor-pointer
                 ${isSelected
-                    ? 'bg-primary text-primary-content shadow-sm'
-                    : 'hover:bg-black/5 hover:text-base-content'
+                    ? 'bg-primary text-primary-content border-primary'
+                    : 'hover:bg-black/5 hover:text-base-content active:bg-black/10'
                 }
             `}
         >
@@ -86,15 +87,16 @@ const SortableLayerItem = ({
             <div
                 {...attributes}
                 {...listeners}
+                onClick={(e) => e.stopPropagation()}
                 className={`cursor-move p-2 -ml-2 rounded-full transition-colors ${isSelected ? 'text-primary-content/50 hover:text-primary-content' : 'text-base-content/30 hover:bg-black/5'}`}
             >
-                <GripVertical size={18} />
+                <MdDragIndicator size={18} />
             </div>
 
             {/* Content */}
             <div className="flex-1 min-w-0">
                 {isEditing ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         <TextField value={editName} onChange={setEditName} aria-label="Layer Name" className="flex-1 min-w-0">
                             <Input
                                 className="w-full bg-base-100 rounded-lg px-3 py-1.5 text-sm font-bold border-2 border-primary outline-none text-base-content"
@@ -105,12 +107,11 @@ const SortableLayerItem = ({
                                 }}
                             />
                         </TextField>
-                        <Button onPress={() => saveEdit(index)} className="p-2 rounded bg-primary/10 text-primary hover:bg-primary hover:text-primary-content transition-colors"><Check size={18} /></Button>
+                        <Button onPress={() => saveEdit(index)} className="p-2 rounded bg-primary/10 text-primary hover:bg-primary hover:text-primary-content transition-colors"><MdCheck size={18} /></Button>
                     </div>
                 ) : (
                     <div
-                        onClick={() => onLayerClicked(index)}
-                        className="cursor-pointer py-1 flex items-center justify-between"
+                        className="py-1 flex items-center justify-between"
                     >
                         <div className={`text-sm font-bold truncate ${isSelected ? 'text-primary-content' : 'text-base-content/90'}`}>
                             {layer.name || `Layer ${index}`}
@@ -124,19 +125,22 @@ const SortableLayerItem = ({
 
             {/* Actions */}
             {!isEditing && !isDragging && (
-                <div className={`flex items-center gap-1 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
+                <div
+                    onClick={(e) => e.stopPropagation()}
+                    className={`flex items-center gap-1 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}
+                >
                     <Button
                         onPress={() => startEditing(index, layer.name || `Layer ${index}`)}
                         className={`p-2 rounded-full transition-colors ${isSelected ? 'hover:bg-black/20 text-primary-content/70 hover:text-primary-content' : 'hover:bg-black/10 text-base-content/40 hover:text-base-content'}`}
                     >
-                        <Edit2 size={16} />
+                        <MdEdit size={16} />
                     </Button>
                     {layersLength > 1 && (
                         <Button
                             onPress={() => onRemoveClicked?.(index)}
                             className={`p-2 rounded-full transition-colors ${isSelected ? 'hover:bg-red-500/20 text-primary-content/70 hover:text-red-100' : 'hover:bg-red-500/10 text-base-content/40 hover:text-red-600'}`}
                         >
-                            <Trash2 size={16} />
+                            <MdDelete size={16} />
                         </Button>
                     )}
                 </div>
@@ -196,14 +200,15 @@ export const LayersPanel = ({
             {/* Header - MD3 Styling */}
             <div className="px-5 py-4 flex items-center justify-between ml-1 mr-1">
                 <div className="flex items-center gap-3 text-base-content/70">
-                    <span className="block text-sm font-bold tracking-wide uppercase opacity-80 pl-1">Layers</span>
+                    <span className="block text-sm font-bold tracking-wide uppercase opacity-80 pl-1">{t("layers.title")}</span>
                 </div>
                 {canAdd && (
                     <Button
                         onPress={onAddClicked}
+                        aria-label={t("layers.add")}
                         className="w-8 h-8 rounded-full bg-base-300/50 hover:bg-white/10 text-base-content/80 flex items-center justify-center transition-all shadow-sm hover:scale-105 active:scale-95"
                     >
-                        <Plus size={18} />
+                        <MdAdd size={18} />
                     </Button>
                 )}
             </div>

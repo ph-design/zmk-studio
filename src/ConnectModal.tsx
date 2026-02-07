@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { RpcTransport } from "@zmkfirmware/zmk-studio-ts-client/transport/index";
 import { UserCancelledError } from "@zmkfirmware/zmk-studio-ts-client/transport/errors";
 import type { AvailableDevice } from "./tauri/index";
-import { Bluetooth, RefreshCw, Languages, X } from "lucide-react";
+import { MdBluetooth, MdRefresh, MdLanguage, MdClose } from "react-icons/md";
 import {
   Key,
   ListBox,
@@ -104,7 +104,7 @@ function deviceList(
           disabled={refreshing}
           onClick={onRefresh}
         >
-          <RefreshCw
+          <MdRefresh
             className={`size-5 transition-transform ${refreshing ? "animate-spin" : ""
               }`}
           />
@@ -125,7 +125,7 @@ function deviceList(
             aria-label={d.label}
           >
             {t.isWireless && (
-              <Bluetooth className="w-4 justify-center content-center h-full" />
+              <MdBluetooth className="w-4 justify-center content-center h-full" />
             )}
             <span className="col-start-2">{d.label}</span>
           </ListBoxItem>
@@ -313,7 +313,7 @@ export const ConnectModal = ({
               className="p-2 rounded-full hover:bg-base-300 transition-colors"
               onPress={() => setLangOpen((open) => !open)}
             >
-              <Languages className="w-5 h-5" />
+              <MdLanguage className="w-5 h-5" />
             </Button>
             {langOpen && (
               <div className="absolute right-0 mt-2 shadow-xl rounded-xl border border-base-200 bg-base-100/90 backdrop-blur-md overflow-hidden z-50 min-w-[120px] py-1">
@@ -344,7 +344,7 @@ export const ConnectModal = ({
               className="p-2 rounded-full hover:bg-base-300 transition-colors text-base-content/70 hover:text-red-500"
               onPress={onClose}
             >
-              <X className="w-5 h-5" />
+              <MdClose className="w-5 h-5" />
             </Button>
           )}
         </div>

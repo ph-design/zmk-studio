@@ -1,4 +1,4 @@
-import { Pencil, Minus, Plus } from "lucide-react";
+import { MdEdit, MdRemove, MdAdd } from "react-icons/md";
 import { useCallback, useMemo, useState } from "react";
 import {
   DropIndicator,
@@ -176,7 +176,7 @@ export const LayerPicker = ({
             disabled={!canRemove}
             onClick={onRemoveClicked}
           >
-            <Minus className="size-4" />
+            <MdRemove className="size-4" />
           </button>
         )}
         {onAddClicked && (
@@ -186,7 +186,7 @@ export const LayerPicker = ({
             className="hover:text-primary-content ml-1 hover:bg-primary rounded-sm disabled:text-gray-500 disabled:hover:bg-base-300 disabled:cursor-not-allowed"
             onClick={onAddClicked}
           >
-            <Plus className="size-4" />
+            <MdAdd className="size-4" />
           </button>
         )}
       </div>
@@ -219,7 +219,7 @@ export const LayerPicker = ({
             className="p-1 b-1 my-1 group grid grid-cols-[1fr_auto] items-center aria-selected:bg-primary aria-selected:text-primary-content border rounded border-transparent border-solid hover:bg-base-300"
           >
             <span>{layer_item.name}</span>
-            <Pencil
+            <MdEdit
               className="h-4 w-4 mx-1 invisible group-hover:visible"
               onClick={() =>
                 setEditLabelData({ id: layer_item.id, name: layer_item.name })

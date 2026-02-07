@@ -6,7 +6,9 @@
     "redo": "Redo",
     "language": "Language",
     "cancel": "Cancel",
-    "close": "Close"
+    "close": "Close",
+    "loading": "Loading...",
+    "model": "Model"
   },
   "welcome": {
     "title": "Welcome to ZMK Studio",
@@ -59,5 +61,65 @@
     "failedToSave": "Failed to save changes",
     "failedToDiscard": "Failed to discard changes",
     "failedToReset": "Failed to reset settings"
+  },
+  "layers": {
+    "title": "Layers",
+    "add": "Add Layer",
+    "select": "Select Layer",
+    "target": "Target Layer",
+    "rename": "Rename Layer",
+    "delete": "Delete Layer",
+    "none": "No matching layers"
+  },
+  "categories": {
+    "basic": "Basic",
+    "layers": "Layers",
+    "mods": "Modifiers",
+    "conn": "Bluetooth",
+    "media": "System",
+    "lighting": "Lighting",
+    "other": "Other"
+  },
+  "behaviors": {
+    "hold": "Hold (Modifier)",
+    "tap": "Tap (Key Press)",
+    "editBinding": "Edit Binding",
+    "configuration": "Configuration",
+    "selectToConfigure": "Select a key to configure",
+    "selectToConfigureDesc": "Click any key on the visual keyboard above to modify its behavior, assign layers, or configure special functions.",
+    "search": "Search behaviors...",
+    "searchLayers": "Search layers...",
+    "noResults": "No Results",
+    "noOptions": "No matching options",
+    "list": "Behaviors",
+    "params": "Configuration"
+  },
+  "hid": {
+    "alpha": "Alpha",
+    "num": "Numbers",
+    "nav": "Navigation",
+    "func": "Functions",
+    "sym": "Symbols",
+    "media": "Media",
+    "mods": "Modifiers",
+    "other": "Other",
+    "filter": "Filter..."
+  },
+  "settings": {
+    "theme": "Theme",
+    "darkMode": "Dark Mode",
+    "lightMode": "Light Mode",
+    "systemMode": "Follow System",
+    "reset": "Factory Reset",
+    "confirmReset": "Are you sure?",
+    "about": "About ZMK Studio"
+  },
+  "status": {
+    "locked": "Locked",
+    "unlocked": "Unlocked",
+    "ready": "Ready",
+    "connected": "Connected",
+    "unsavedChanges": "Unsaved Changes",
+    "waitingForUnlock": "Waiting for Unlock..."
   }
 }

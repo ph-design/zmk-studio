@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, useRef } from "react";
-import { Search, ChevronRight, Keyboard, Layers, Command, Zap, Bluetooth, Lightbulb, Settings, MoreHorizontal } from "lucide-react";
+import { MdSearch, MdKeyboard, MdLayers, MdKeyboardCommandKey, MdBluetooth, MdLightbulbOutline, MdSettings, MdMoreHoriz } from "react-icons/md";
+import { Button } from "react-aria-components";
+import { useTranslation } from "react-i18next";
 import {
   GetBehaviorDetailsResponse,
   BehaviorBindingParametersSet,
@@ -7,7 +9,7 @@ import {
 import { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import { BehaviorParametersPicker } from "./BehaviorParametersPicker";
 import { validateValue } from "./parameters";
-import { Button, TextField, Input } from "react-aria-components";
+import { ModifierPicker } from "./ModifierPicker";
 
 export interface BehaviorBindingPickerProps {
   binding: BehaviorBinding;
@@ -18,13 +20,13 @@ export interface BehaviorBindingPickerProps {
 
 // --- Categorization Logic ---
 const CATEGORIES = [
-  { id: "basic", label: "Basic", icon: Keyboard, match: ["Key Press", "Transparent", "None"] },
-  { id: "layers", label: "Layers", icon: Layers, match: ["Layer", "Momentary", "Toggle", "To Layer"] },
-  { id: "mods", label: "Modifiers", icon: Command, match: ["Mod-Tap", "Sticky Key", "Caps Word", "Key Repeat"] },
-  { id: "conn", label: "Bluetooth", icon: Bluetooth, match: ["Bluetooth", "Output"] },
-  { id: "media", label: "System", icon: Settings, match: ["Reset", "Bootloader", "Studio Unlock"] },
-  { id: "lighting", label: "Lighting", icon: Lightbulb, match: ["RGB", "Backlight"] },
-  { id: "other", label: "Other", icon: MoreHorizontal, match: [] },
+  { id: "basic", labelKey: "categories.basic", icon: MdKeyboard, match: ["Key Press", "Transparent", "None"] },
+  { id: "layers", labelKey: "categories.layers", icon: MdLayers, match: ["Layer", "Momentary", "Toggle", "To Layer"] },
+  { id: "mods", labelKey: "categories.mods", icon: MdKeyboardCommandKey, match: ["Mod-Tap", "Sticky Key", "Caps Word", "Key Repeat"] },
+  { id: "conn", labelKey: "categories.conn", icon: MdBluetooth, match: ["Bluetooth", "Output"] },
+  { id: "media", labelKey: "categories.media", icon: MdSettings, match: ["Reset", "Bootloader", "Studio Unlock"] },
+  { id: "lighting", labelKey: "categories.lighting", icon: MdLightbulbOutline, match: ["RGB", "Backlight", "Underglow"] },
+  { id: "other", labelKey: "categories.other", icon: MdMoreHoriz, match: [] },
 ];
 
 function getCategory(displayName: string): string {
@@ -70,6 +72,7 @@ export const BehaviorBindingPicker = ({
   behaviors,
   onBindingChanged,
 }: BehaviorBindingPickerProps) => {
+  const { t } = useTranslation();
   const [behaviorId, setBehaviorId] = useState(binding.behaviorId);
   const [param1, setParam1] = useState<number | undefined>(binding.param1);
   const [param2, setParam2] = useState<number | undefined>(binding.param2);
@@ -80,6 +83,27 @@ export const BehaviorBindingPicker = ({
     () => behaviors.find((b) => b.id == behaviorId)?.metadata,
     [behaviorId, behaviors]
   );
+
+  const modifierParamIndex = useMemo(() => {
+    if (!metadata) return -1;
+    const p1Supported = metadata.some(m => m.param1?.some(v => v.hidUsage && v.hidUsage.keyboardMax));
+    if (p1Supported) return 1;
+
+    const p2Supported = metadata.some(m => m.param2?.some(v => v.hidUsage && v.hidUsage.keyboardMax));
+    if (p2Supported) return 2;
+
+    return -1;
+  }, [metadata]);
+
+  const supportsModifiers = modifierParamIndex !== -1;
+
+  const isSpecialLayout = useMemo(() => {
+    if (!metadata) return false;
+    // ONLY Mod-Tap is "special" (two specific columns).
+    // Layer-Tap is a normal vertical config + global modifier column.
+    const isModTap = metadata.some(s => s.param1?.some(p => p.hidUsage && p.hidUsage.keyboardMax) && s.param2?.some(p => p.hidUsage && p.hidUsage.keyboardMax));
+    return isModTap;
+  }, [metadata]);
 
   const filteredBehaviors = useMemo(() => {
     return behaviors
@@ -94,120 +118,125 @@ export const BehaviorBindingPicker = ({
       .sort((a, b) => a.displayName.localeCompare(b.displayName));
   }, [behaviors, searchTerm, selectedCategory]);
 
-  useEffect(() => {
-    if (
-      binding.behaviorId === behaviorId &&
-      binding.param1 === param1 &&
-      binding.param2 === param2
-    ) return;
+  // --- BIDIRECTIONAL SYNC LOGIC ---
+  const lastBindingSent = useRef<BehaviorBinding | null>(null);
+  const lastPropBehaviorId = useRef<number | string>(binding.behaviorId);
 
-    if (!metadata) return;
+  // Consolidate updates into a single function
+  const updateBinding = (newId: number, p1: number | undefined, p2: number | undefined) => {
+    const newBinding = {
+      behaviorId: newId,
+      param1: p1 || 0,
+      param2: p2 || 0
+    };
 
-    if (
-      validateBinding(
-        metadata,
-        layers.map(({ id }) => id),
-        param1,
-        param2
-      )
-    ) {
-      onBindingChanged({
-        behaviorId,
-        param1: param1 || 0,
-        param2: param2 || 0,
-      });
+    // Update local state for immediate feedback
+    setBehaviorId(newId);
+    setParam1(p1);
+    setParam2(p2);
+
+    // Track what we are sending so we can ignore it when it comes back as a prop
+    lastBindingSent.current = newBinding;
+
+    const behaviorMetadata = behaviors.find(b => b.id === newId)?.metadata;
+
+    // For behavior switch, we often don't have metadata yet, but we must notify parent
+    if (!behaviorMetadata || validateBinding(behaviorMetadata, layers.map(l => l.id), p1, p2)) {
+      onBindingChanged(newBinding);
     }
-  }, [behaviorId, param1, param2]);
+  };
 
+  // Sync from props only when an EXTERNAL change occurs
   useEffect(() => {
+    // 1. Check if the incoming binding is the one we just sent
+    const isSelfUpdate = lastBindingSent.current &&
+      binding.behaviorId === lastBindingSent.current.behaviorId &&
+      binding.param1 === lastBindingSent.current.param1 &&
+      binding.param2 === lastBindingSent.current.param2;
+
+    if (isSelfUpdate) {
+      return;
+    }
+
+    // 2. Sync local parameters
     setBehaviorId(binding.behaviorId);
     setParam1(binding.param1);
     setParam2(binding.param2);
-  }, [binding]);
 
-  const currentBehavior = behaviors.find(b => b.id === behaviorId);
+    // 3. ONLY sync category if the behavior ID actually changed from props
+    // This allows the user to browse categories without the UI jumping back 
+    // to the category of the currently active key.
+    if (binding.behaviorId !== lastPropBehaviorId.current) {
+      const behavior = behaviors.find(b => b.id === binding.behaviorId);
+      if (behavior) {
+        setSelectedCategory(getCategory(behavior.displayName));
+      }
+      lastPropBehaviorId.current = binding.behaviorId;
+    }
+
+    // Reset our "last sent" tracker
+    lastBindingSent.current = null;
+  }, [binding.behaviorId, binding.param1, binding.param2, behaviors]);
+
+  const onParam1Changed = (v?: number) => updateBinding(behaviorId, v, param2);
+  const onParam2Changed = (v?: number) => updateBinding(behaviorId, param1, v);
+  const onBehaviorChanged = (id: number) => updateBinding(id, 0, 0);
 
   return (
-    <div className="flex h-full w-full bg-base-100">
+    <div className="flex h-full w-full bg-base-100 font-sans">
 
-      {/* 1. LEFT SIDEBAR: Navigation (Fixed Width) */}
-      <div className="w-64 flex flex-col border-r border-base-content/5 bg-base-200/30 p-4 gap-4">
-        {/* Search */}
-        <div className="px-0">
-          <TextField value={searchTerm} onChange={setSearchTerm} className="relative group w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-base-content/40 group-focus-within:text-primary transition-colors" />
-            <Input
-              placeholder="Search..."
-              className="w-full bg-base-100 border border-transparent focus:border-primary/20 rounded-full pl-10 pr-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-base-content/30 shadow-sm"
-            />
-          </TextField>
-        </div>
-
-        {/* Vertical Category List */}
-        <div className="flex flex-col gap-1 overflow-y-auto flex-1 pr-1 custom-scrollbar">
-          {CATEGORIES.map(cat => {
-            const Icon = cat.icon;
-            const isActive = selectedCategory === cat.id && !searchTerm;
-            return (
-              <Button
-                key={cat.id}
-                onPress={() => {
-                  setSelectedCategory(cat.id);
-                  setSearchTerm(""); // Clear search when picking category
-                }}
-                className={`
-                        flex items-center gap-3 px-4 py-3 rounded-full text-xs font-bold transition-all border outline-none w-full text-left
+      {/* 1. LEFT SIDEBAR: Navigation Rail (MD3 Navigation Drawer style) */}
+      <div className="flex flex-col bg-base-200/50 p-4 gap-1 overflow-y-auto custom-scrollbar shrink-0 w-auto min-w-[220px]">
+        {CATEGORIES.map(cat => {
+          const Icon = cat.icon;
+          const isActive = selectedCategory === cat.id && !searchTerm;
+          return (
+            <Button
+              key={cat.id}
+              onPress={() => {
+                setSelectedCategory(cat.id);
+                setSearchTerm("");
+              }}
+              className={`
+                        flex items-center gap-4 px-4 py-3 rounded-full text-sm font-medium transition-all outline-none w-full text-left
                         ${isActive
-                    ? 'bg-primary/10 text-primary border-transparent'
-                    : 'bg-transparent text-base-content/60 border-transparent hover:bg-base-content/5 hover:text-base-content'
-                  }
+                  ? 'bg-primary/10 text-primary font-bold'
+                  : 'bg-transparent text-base-content/70 hover:bg-base-content/10 hover:text-base-content'
+                }
                     `}
-              >
-                <Icon size={18} strokeWidth={2} className={isActive ? "opacity-100" : "opacity-70"} />
-                <span className="flex-1 tracking-wide">{cat.label}</span>
-              </Button>
-            );
-          })}
-        </div>
+            >
+              <Icon size={20} />
+              <span className="flex-1 tracking-wide truncate">{t(cat.labelKey)}</span>
+            </Button>
+          );
+        })}
       </div>
 
-      {/* 2. MIDDLE COLUMN: Behavior Grid (Restricted Width) */}
-      <div className="w-[450px] flex flex-col border-r border-base-content/5 bg-base-100">
-        <div className="px-6 py-4 border-b border-base-content/5 sticky top-0 bg-base-100/95 backdrop-blur z-10 flex items-center justify-between">
-          <span className="text-xs font-bold text-base-content/50 uppercase tracking-widest">
-            {searchTerm ? `Results` : CATEGORIES.find(c => c.id === selectedCategory)?.label}
-          </span>
-          <span className="text-[10px] font-mono text-base-content/30">{filteredBehaviors.length} items</span>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+      {/* 2. MIDDLE COLUMN: Behavior List (MD3 List style) */}
+      <div className="flex flex-col bg-base-100 shrink-0 w-auto min-w-[240px] max-w-xs border-r border-base-content/5">
+        <div className="flex-1 overflow-y-auto px-4 py-4 custom-scrollbar">
           {filteredBehaviors.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-base-content/40 gap-3">
-              <Search size={32} className="opacity-20" />
-              <span className="text-sm font-medium">No behaviors found</span>
+              <MdSearch size={24} className="opacity-20" />
+              <span className="text-xs font-medium">{t("behaviors.noResults")}</span>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3 pb-8">
+            <div className="flex flex-col gap-1">
               {filteredBehaviors.map((b) => {
                 const isSelected = b.id === behaviorId;
                 return (
                   <Button
                     key={b.id}
-                    onPress={() => {
-                      setBehaviorId(b.id);
-                      setParam1(0);
-                      setParam2(0);
-                    }}
+                    onPress={() => onBehaviorChanged(b.id)}
                     className={`
-                            p-4 rounded-2xl border text-left transition-all group relative overflow-hidden flex flex-col gap-1 outline-none
-                            ${isSelected
-                        ? 'bg-primary text-primary-content border-primary shadow-md scale-[1.02]'
-                        : 'bg-base-200/50 border-transparent hover:bg-base-200 text-base-content hover:scale-[1.01]'
+                                px-4 py-3 rounded-full text-left transition-all group relative overflow-hidden flex items-center gap-3 outline-none
+                                ${isSelected
+                        ? 'bg-primary/10 text-primary font-bold'
+                        : 'bg-transparent text-base-content/80 hover:bg-base-200/50 hover:text-base-content'
                       }
-                        `}
+                            `}
                   >
-                    <span className="text-sm font-bold truncate w-full block">{b.displayName}</span>
-                    <span className={`text-[10px] font-mono opacity-60 ${isSelected ? 'text-primary-content/80' : ''}`}>#{b.id}</span>
+                    <span className="text-sm truncate flex-1">{b.displayName}</span>
                   </Button>
                 );
               })}
@@ -216,42 +245,52 @@ export const BehaviorBindingPicker = ({
         </div>
       </div>
 
-      {/* 3. RIGHT COLUMN: Configuration (Takes Remaining Space) */}
-      <div className="flex-1 bg-base-50 flex flex-col min-w-[300px]">
-        {metadata ? (
-          <div className="flex flex-col h-full animate-in slide-in-from-right-4 duration-300 fade-in">
-            <div className="p-6 border-b border-base-content/5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                <Settings size={20} />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-base-content">{currentBehavior?.displayName}</h3>
-                <p className="text-xs text-base-content/40 font-medium">Configure parameters</p>
-              </div>
+      {/* RIGHT AREA: Config & Mods */}
+      <div className="flex-1 bg-base-100 flex flex-col min-w-[400px]">
+        {/* Content Area: Config (Left) + Mods (Right) */}
+        <div className="flex-1 flex min-h-0">
+          {/* 3. CONFIG COLUMN */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar relative flex flex-col px-4 py-4">
+            <div className="flex-1 relative flex flex-col">
+              {metadata ? (
+                <div className="flex-1 w-full flex flex-col min-h-0">
+                  <div className="h-full flex flex-col">
+                    <BehaviorParametersPicker
+                      metadata={metadata}
+                      param1={param1}
+                      param2={param2}
+                      layers={layers}
+                      onParam1Changed={onParam1Changed}
+                      onParam2Changed={onParam2Changed}
+                      hideModifiers={supportsModifiers} // Hide footer if we show column
+                      searchTerm={searchTerm}
+                      onSearchTermChanged={setSearchTerm}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center text-base-content/20 gap-4">
+                  <div className="w-16 h-16 rounded-full bg-base-200/50 flex items-center justify-center">
+                    <MdSettings size={28} />
+                  </div>
+                  <span className="text-sm font-medium">{t("behaviors.selectToConfigure")}</span>
+                </div>
+              )}
             </div>
+          </div>
 
-            <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-              {/* Proper themed container for parameters */}
-              <div className="w-full max-w-lg">
-                <BehaviorParametersPicker
-                  metadata={metadata}
-                  param1={param1}
-                  param2={param2}
-                  layers={layers}
-                  onParam1Changed={setParam1}
-                  onParam2Changed={setParam2}
+          {/* 4. MODIFIERS COLUMN (Show only if supported and not a special layout) */}
+          {metadata && supportsModifiers && !isSpecialLayout && (
+            <div className="w-64 bg-base-50/30 flex flex-col border-l border-base-content/5">
+              <div className="flex-1 p-4 overflow-y-auto custom-scrollbar">
+                <ModifierPicker
+                  value={modifierParamIndex === 2 ? param2 : param1}
+                  onValueChanged={modifierParamIndex === 2 ? onParam2Changed : onParam1Changed}
                 />
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-base-content/20 gap-4">
-            <div className="w-16 h-16 rounded-full bg-base-200/50 flex items-center justify-center">
-              <Settings size={24} />
-            </div>
-            <span className="text-sm font-medium">Select a behavior to configure</span>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

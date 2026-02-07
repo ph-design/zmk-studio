@@ -142,6 +142,7 @@ export const PhysicalLayout = ({
   return (
     <div
       className="relative"
+      onClick={(e) => e.stopPropagation()}
       style={{
         height: bottomMost * oneU + "px",
         width: rightMost * oneU + "px",

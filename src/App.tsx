@@ -167,6 +167,7 @@ function App() {
     string | undefined
   >(undefined);
   const [doIt, undo, redo, canUndo, canRedo, reset] = useUndoRedo();
+  const undoRedoCtx = { doIt, undo, redo, canUndo, canRedo };
   const [showAbout, setShowAbout] = useState(false);
   const [showLicenseNotice, setShowLicenseNotice] = useState(false);
   const [connectionAbort, setConnectionAbort] = useState(new AbortController());
@@ -263,7 +264,7 @@ function App() {
     <I18nextProvider i18n={i18n}>
       <ConnectionContext.Provider value={conn}>
         <LockStateContext.Provider value={lockState}>
-          <UndoRedoContext.Provider value={doIt}>
+          <UndoRedoContext.Provider value={undoRedoCtx}>
             <div className="relative w-full h-full bg-base-100 overflow-hidden font-sans text-base-content selection:bg-primary selection:text-primary-content">
               {/* <UnlockModal />  -- Replaced by Popover in SystemPanel */}
               <ConnectModal
@@ -291,9 +292,7 @@ function App() {
                     onTransportCreated={onConnect}
                     onConnectCommon={() => setShowConnectModal(true)}
                   />
-                  <div className="absolute bottom-4 text-xs text-base-content/20 font-mono">
-                    ZMK Studio v{import.meta.env.PACKAGE_VERSION || "Dev"}
-                  </div>
+
                 </div>
               )}
 

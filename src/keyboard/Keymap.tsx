@@ -48,11 +48,16 @@ export const Keymap = ({
       };
     }
 
+    const binding = keymap.layers[selectedLayerIndex].bindings[i];
+    const behavior = behaviors[binding.behaviorId];
+
+    // Check for "implicit mods" in the high 8 bits of param1
+    const hasModifiers = (binding.param1 & 0xFF000000) !== 0;
+
     return {
       id: `${keymap.layers[selectedLayerIndex].id}-${i}`,
-      header:
-        behaviors[keymap.layers[selectedLayerIndex].bindings[i].behaviorId]
-          ?.displayName || "Unknown",
+      header: behavior?.displayName || "Unknown",
+      hasModifiers,
       x: k.x / 100.0,
       y: k.y / 100.0,
       width: k.width / 100,
@@ -62,7 +67,7 @@ export const Keymap = ({
       ry: (k.ry || 0) / 100.0,
       children: (
         <HidUsageLabel
-          hid_usage={keymap.layers[selectedLayerIndex].bindings[i].param1}
+          hid_usage={binding.param1}
         />
       ),
     };

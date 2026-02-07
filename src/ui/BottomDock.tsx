@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { MdAdd } from "react-icons/md";
 import { Button } from "react-aria-components";
 
 interface Layer {
@@ -57,7 +57,7 @@ export const BottomDock = ({
                             onPress={onAddClicked}
                             className="w-10 h-10 flex flex-shrink-0 items-center justify-center rounded-full hover:bg-surface-glass text-base-content/60 transition-colors outline-none"
                         >
-                            <Plus size={20} />
+                            <MdAdd size={20} />
                         </Button>
                     </>
                 )}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, useContext } from "react";
 import { useTranslation } from "react-i18next";
+import { MdLock, MdUndo, MdRedo, MdSave, MdRefresh } from "react-icons/md";
 import { call_rpc } from "../rpc/logging";
 import { produce } from "immer";
 import { Keymap as KeymapComp } from "./Keymap";
@@ -17,20 +18,24 @@ import { ConnectionContext } from "../rpc/ConnectionContext";
 import { LockStateContext } from "../rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { useSub } from "../usePubSub";
+import { AboutModal } from "../AboutModal";
 
 
 export default function Keyboard() {
     const { t } = useTranslation();
     const conn = useContext(ConnectionContext);
-    const doIt = useContext(UndoRedoContext);
+    const undoRedo = useContext(UndoRedoContext);
+    const doIt = undoRedo?.doIt;
     const lockState = useContext(LockStateContext);
 
-    // Unsaved Changes State
-    const [unsaved, setUnsaved] = useConnectedDeviceData<boolean>(
-        { keymap: { checkUnsavedChanges: true } },
-        (r) => r.keymap?.checkUnsavedChanges,
-        false // Default to false to avoid initial popup
-    );
+    // Unsaved Changes State - Default to false on connect to avoid false positives
+    const [unsaved, setUnsaved] = useState(false);
+    const [showAbout, setShowAbout] = useState(false);
+    const [kaomojiClicks, setKaomojiClicks] = useState(0);
+
+    // Loading states for actions
+    const [isSaving, setIsSaving] = useState(false);
+    const [isDiscarding, setIsDiscarding] = useState(false);
 
     useSub("rpc_notification.keymap.unsavedChangesStatusChanged", (status) =>
         setUnsaved(status)
@@ -285,35 +290,40 @@ export default function Keyboard() {
     const dispatchReset = () => window.dispatchEvent(new CustomEvent('zmk-studio-reset-settings'));
 
     // --- Handlers for Save/Discard ---
-    // We manually optimistically update unsaved state to false to provide immediate UI feedback.
-    // The backend will eventually send a notification (or we'll refetch), but this feels snappier.
     const handleSave = async () => {
-        await conn.conn?.keymap?.saveChanges();
-        setUnsaved(false);
+        setIsSaving(true);
+        try {
+            await conn.conn?.keymap?.saveChanges();
+            setUnsaved(false);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleDiscard = async () => {
         if (!conn.conn) return;
+        setIsDiscarding(true);
+        try {
+            // 1. Force UI into loading state (clear keymap)
+            setKeymap(undefined as any);
 
-        // 1. Force UI into loading state (clear keymap)
-        // This gives distinct visual feedback that a "Reset" is occurring
-        // AND ensures that when we setKeymap later, it's a fresh render
-        setKeymap(undefined as any);
+            // 2. Tell device to revert to last saved state
+            await conn.conn.keymap?.discardChanges();
 
-        // 2. Tell device to revert to last saved state
-        await conn.conn.keymap?.discardChanges();
+            // 3. Wait ample time for device to reload from flash
+            await new Promise(resolve => setTimeout(resolve, 600));
 
-        // 3. Wait ample time for device to reload from flash
-        await new Promise(resolve => setTimeout(resolve, 600));
+            // 4. Explicitly re-fetch the keymap data
+            const result = await call_rpc(conn.conn, { keymap: { getKeymap: true } });
+            if (result.keymap?.getKeymap) {
+                console.log("Keymap reverted successfully, UI updated.");
+                setKeymap(result.keymap.getKeymap);
+            }
 
-        // 4. Explicitly re-fetch the keymap data
-        const result = await call_rpc(conn.conn, { keymap: { getKeymap: true } });
-        if (result.keymap?.getKeymap) {
-            console.log("Keymap reverted successfully, UI updated.");
-            setKeymap(result.keymap.getKeymap);
+            setUnsaved(false);
+        } finally {
+            setIsDiscarding(false);
         }
-
-        setUnsaved(false);
     };
 
 
@@ -321,7 +331,7 @@ export default function Keyboard() {
         <div className="flex w-full h-full bg-base-100 overflow-hidden text-base-content font-sans selection:bg-primary selection:text-primary-content">
 
             {/* Sidebar Area - MD3 Surface Container Low (base-200) */}
-            <aside className="w-80 flex flex-col bg-base-200 relative z-30 shadow-xl">
+            <aside className="w-80 flex flex-col bg-base-200 relative z-30 border-r border-base-content/5">
                 <DevicePanel
                     deviceName={deviceInfo?.name || "ZMK Keyboard"}
                     transportLabel="USB"
@@ -344,8 +354,17 @@ export default function Keyboard() {
                     )}
                     {!keymap && (
                         <div className="p-6 text-center opacity-50 text-sm flex flex-col items-center gap-2">
-                            <span className="loading loading-spinner text-primary"></span>
-                            <span>Loading Layers...</span>
+                            {lockState !== LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED ? (
+                                <>
+                                    <MdLock size={24} />
+                                    <span>{t("status.locked")}</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="loading loading-spinner text-primary"></span>
+                                    <span>{t("common.loading")}</span>
+                                </>
+                            )}
                         </div>
                     )}
                 </div>
@@ -355,33 +374,101 @@ export default function Keyboard() {
                     locked={lockState !== LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED}
                     onSave={handleSave}
                     onDiscard={handleDiscard}
+                    onResetSettings={dispatchReset}
+                    onShowAbout={() => setShowAbout(true)}
                 />
             </aside>
 
-            {/* Main Canvas Area */}
-            <main className="flex-1 relative bg-base-100 overflow-hidden flex flex-col">
-                <div className="flex-1 relative flex items-center justify-center p-10">
+            {/* Main Canvas Area - Modified for Permanent Bottom Drawer */}
+            <main className="flex-1 relative bg-base-100 overflow-hidden flex flex-col pb-[450px]">
+                {/* Toolbar */}
+                <div className="absolute top-4 left-4 z-20 flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
+
+                    {/* Undo/Redo Group */}
+                    <div className="flex items-center gap-1 bg-base-100/80 backdrop-blur-md rounded-2xl border border-base-content/20 shadow-sm p-1">
+                        <button
+                            title={t("common.undo")}
+                            onClick={undoRedo?.undo}
+                            disabled={!undoRedo?.canUndo}
+                            className="p-3 rounded-xl hover:bg-base-content/5 disabled:opacity-30 disabled:cursor-not-allowed text-base-content transition-all active:scale-90 flex items-center justify-center outline-none group"
+                        >
+                            <MdUndo size={20} className="group-active:-rotate-12 transition-transform" />
+                        </button>
+                        <div className="w-px h-4 bg-base-content/10 mx-0.5" />
+                        <button
+                            title={t("common.redo")}
+                            onClick={undoRedo?.redo}
+                            disabled={!undoRedo?.canRedo}
+                            className="p-3 rounded-xl hover:bg-base-content/5 disabled:opacity-30 disabled:cursor-not-allowed text-base-content transition-all active:scale-90 flex items-center justify-center outline-none group"
+                        >
+                            <MdRedo size={20} className="group-active:rotate-12 transition-transform" />
+                        </button>
+                    </div>
+
+                    {/* Unsaved Changes Group */}
+                    {unsaved && (
+                        <div className="flex items-center gap-1 bg-base-100/90 backdrop-blur-md rounded-2xl border border-base-content/10 shadow-lg p-1 animate-in zoom-in-95 slide-in-from-left-2 duration-300">
+                            <button
+                                title={t("common.discard")}
+                                onClick={handleDiscard}
+                                disabled={isDiscarding || isSaving}
+                                className="p-3 rounded-xl hover:bg-error/10 text-error disabled:opacity-50 transition-all active:scale-90 flex items-center justify-center outline-none group relative"
+                            >
+                                <MdRefresh size={20} className={`transition-transform ${isDiscarding ? 'animate-spin' : 'group-hover:-rotate-90'}`} />
+                            </button>
+                            <div className="w-px h-4 bg-base-content/10 mx-0.5" />
+                            <button
+                                title={t("common.save")}
+                                onClick={handleSave}
+                                disabled={isSaving || isDiscarding}
+                                className="p-3 rounded-xl bg-primary text-primary-content shadow-md hover:brightness-110 disabled:opacity-50 transition-all active:scale-90 flex items-center justify-center outline-none group relative"
+                            >
+                                {isSaving ? (
+                                    <MdRefresh size={20} className="animate-spin" />
+                                ) : (
+                                    <MdSave size={20} />
+                                )}
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                <div
+                    className="flex-1 relative flex items-center justify-center p-4 cursor-alias"
+                    onClick={() => setSelectedKeyPosition(undefined)}
+                >
                     {layouts && keymap && behaviors ? (
-                        <KeymapComp
-                            keymap={keymap}
-                            layout={layouts[selectedPhysicalLayoutIndex]}
-                            behaviors={behaviors}
-                            scale="auto"
-                            selectedLayerIndex={selectedLayerIndex}
-                            selectedKeyPosition={selectedKeyPosition}
-                            onKeyPositionClicked={setSelectedKeyPosition}
-                        />
+                        <div className="w-full h-full flex items-center justify-center animate-in fade-in duration-700 fill-mode-both">
+                            <KeymapComp
+                                keymap={keymap}
+                                layout={layouts[selectedPhysicalLayoutIndex]}
+                                behaviors={behaviors}
+                                scale="auto" // Auto scale will fill the container, which is now smaller (top half)
+                                selectedLayerIndex={selectedLayerIndex}
+                                selectedKeyPosition={selectedKeyPosition}
+                                onKeyPositionClicked={setSelectedKeyPosition}
+                            />
+                        </div>
                     ) : (
-                        <div className="flex flex-col items-center gap-4 text-base-content/20 animate-pulse">
-                            <span className="loading loading-spinner loading-lg text-primary"></span>
-                            <span className="font-bold tracking-widest text-sm">Now Loading...</span>
+                        <div className="flex flex-col items-center gap-4 text-base-content/20 animate-pulse duration-1000">
+                            {lockState !== LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED ? (
+                                <>
+                                    <MdLock size={48} className="text-warning/50" />
+                                    <span className="font-bold tracking-widest text-sm uppercase">{t("status.waitingForUnlock", "Waiting for Unlock...")}</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="loading loading-spinner loading-lg text-primary"></span>
+                                    <span className="font-bold tracking-widest text-sm">{t("common.loading")}</span>
+                                </>
+                            )}
                         </div>
                     )}
 
                     {layouts && layouts.length > 1 && (
-                        <div className="absolute bottom-8 z-20">
-                            <div className="surface-panel p-2 flex items-center gap-2 shadow-lg backdrop-blur-md bg-base-200/80">
-                                <span className="text-[10px] uppercase tracking-widest text-base-content/40 px-2 font-bold">{t("Model")}</span>
+                        <div className="absolute top-8 z-20"> {/* Re-positioned Model picker to top */}
+                            <div className="surface-panel p-2 flex items-center gap-2 backdrop-blur-md bg-base-200/80 rounded-2xl">
+                                <span className="text-[10px] uppercase tracking-widest text-base-content/40 px-2 font-bold">{t("common.model")}</span>
                                 <PhysicalLayoutPicker
                                     layouts={layouts}
                                     selectedPhysicalLayoutIndex={selectedPhysicalLayoutIndex}
@@ -393,12 +480,14 @@ export default function Keyboard() {
                 </div>
             </main>
 
+            {/* Permanent Bottom Drawer */}
             <BehaviorDrawer
-                isOpen={selectedKeyPosition !== undefined}
-                onClose={() => setSelectedKeyPosition(undefined)}
-                title="Edit Binding"
+                isOpen={true} // Always Open
+                onClose={() => { }} // No closing
+                title={selectedKeyPosition !== undefined ? t("behaviors.editBinding") : t("behaviors.configuration")}
+                hideHeader={true}
             >
-                {keymap && behaviors && selectedBinding && (
+                {selectedKeyPosition !== undefined && keymap && behaviors && selectedBinding ? (
                     <BehaviorBindingPicker
                         binding={selectedBinding}
                         behaviors={Object.values(behaviors)}
@@ -408,8 +497,30 @@ export default function Keyboard() {
                         }))}
                         onBindingChanged={doUpdateBinding}
                     />
+                ) : (
+                    <div className="flex h-full w-full items-center justify-center flex-col bg-base-100 select-none overflow-hidden">
+                        <div
+                            onClick={() => setKaomojiClicks(c => c + 1)}
+                            className={`
+                                text-8xl font-sans text-base-content/10 
+                                select-none
+                                ${kaomojiClicks < 10 ? "cursor-pointer hover:scale-110 active:scale-90 active:rotate-12 transition-all duration-200 ease-out" : ""}
+                            `}
+                            style={kaomojiClicks >= 10 ? {
+                                transition: 'all 2s ease-in',
+                                transform: 'translateY(-50vh) scale(0.75)',
+                                opacity: 0,
+                                filter: 'blur(20px)',
+                                pointerEvents: 'none'
+                            } : {}}
+                        >
+                            {kaomojiClicks >= 10 ? "( x _ x )" : "╮(￣▽￣)╭"}
+                        </div>
+                    </div>
                 )}
             </BehaviorDrawer>
+
+            <AboutModal open={showAbout} onClose={() => setShowAbout(false)} />
         </div>
     );
 }

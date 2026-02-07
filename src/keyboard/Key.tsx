@@ -7,6 +7,7 @@ interface KeyProps {
   height: number;
   oneU: number;
   header?: string;
+  hasModifiers?: boolean;
   onClick?: () => void;
 }
 
@@ -31,39 +32,39 @@ export const Key = ({
   height,
   oneU,
   header,
+  hasModifiers,
   onClick,
   children,
 }: PropsWithChildren<KeyProps>) => {
-  const pixelWidth = width * oneU - 2;
-  const pixelHeight = height * oneU - 2;
+  // MD3: Increased gap (4px margin implied by -4) for better separation
+  const pixelWidth = width * oneU - 4;
+  const pixelHeight = height * oneU - 4;
 
   // Determine font size based on text length to prevent overflow
-  // When header is hidden (headerText is empty), we can afford a slightly larger font for the main keycode
   const headerText = formatHeader(header);
   const contentLength = typeof children === 'string' ? children.length : 0;
 
-  // Reduced base font sizes as requested
-  let fontSizeClass = "text-[10px]"; // Default small
+  // Reduced font sizes & lighter weight as requested
+  let fontSizeClass = "text-[9px] font-medium"; // Default small
   if (!headerText) {
-    // Clean keys (no header) get slightly larger but still contained text
-    fontSizeClass = "text-xs font-bold";
+    // Clean keys (no header) get slightly larger
+    fontSizeClass = "text-[11px] font-semibold";
   }
 
   // Auto-scale down for long labels
-  if (contentLength > 5) fontSizeClass = "text-[10px]";
-  if (contentLength > 8) fontSizeClass = "text-[9px] leading-tight";
+  if (contentLength > 5) fontSizeClass = "text-[9px]";
+  if (contentLength > 8) fontSizeClass = "text-[8px] leading-tight";
 
   return (
     <button
-      // Removed scale transforms to fix overlap issues.
-      // Simplified z-index: Selected is elevated (z-10), Hover is elevated (z-20) to ensure tooltips/borders clarify.
-      // rounded-lg (8px) instead of rounded-xl (12px) for a slightly sharper look
+      // MD3: rounded-2xl for "Extra Small" to "Small" components shape
+      // Tonal Selection: bg-primary vs bg-surface-container
       className={`
-          group relative flex flex-col justify-center items-center cursor-pointer transition-colors duration-200
-          rounded-lg border shadow-sm overflow-hidden select-none outline-none
+          group relative flex flex-col justify-center items-center cursor-pointer transition-all duration-200
+          rounded-xl overflow-hidden select-none outline-none shadow-none border-0
           ${selected
-          ? "bg-primary text-primary-content border-primary z-10 shadow-md"
-          : "bg-base-200 text-base-content border-base-300 hover:border-primary/50 hover:bg-base-300 z-0 hover:z-20 hover:shadow-md"
+          ? "bg-primary text-primary-content shadow-md scale-[0.98]"
+          : "bg-base-200 text-base-content hover:bg-base-300 hover:scale-[0.98]"
         }
         `}
       style={{
@@ -72,11 +73,19 @@ export const Key = ({
       }}
       onClick={onClick}
     >
+      {/* Modifier Indicator - Small dot in top right */}
+      {hasModifiers && (
+        <div className={`
+                absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full
+                ${selected ? "bg-primary-content opacity-80" : "bg-primary"}
+            `} />
+      )}
+
       {/* Header - Only shown for "interesting" behaviors like Mod-Tap, Layers, etc. */}
       {headerText && (
         <div className={`
-                absolute top-1 left-1.5 right-1.5 
-                text-[9px] font-bold opacity-60 truncate text-left
+                absolute top-1 left-1.5 right-4
+                text-[8px] font-bold opacity-50 truncate text-left tracking-wide
                 ${selected ? "text-primary-content" : "text-base-content"} 
             `}>
           {headerText}
@@ -85,17 +94,12 @@ export const Key = ({
 
       {/* Main Center Content */}
       <div className={`
-            flex-1 flex items-center justify-center font-bold px-1 text-center w-full break-words
+            flex-1 flex items-center justify-center px-1 text-center w-full break-words
             ${fontSizeClass}
-            ${headerText ? 'pt-3' : ''} 
+            ${headerText ? 'pt-2' : ''} 
         `}>
         {children}
       </div>
-
-      {/* Selection Indicator Bar - Kept as the primary selection cue */}
-      {selected && (
-        <div className="absolute inset-x-3 bottom-1.5 h-0.5 bg-primary-content/30 rounded-full" />
-      )}
     </button>
   );
 };

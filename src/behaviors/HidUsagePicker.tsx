@@ -1,24 +1,18 @@
 import {
   Button,
-  Checkbox,
-  CheckboxGroup,
-  Collection,
-  ComboBox,
-  Header,
   Input,
-  Key,
-  Label,
-  ListBox,
-  ListBoxItem,
-  Popover,
-  Section,
 } from "react-aria-components";
 import {
-  hid_usage_from_page_and_id,
+  hid_usage_get_labels,
   hid_usage_page_get_ids,
 } from "../hid-usages";
-import { useCallback, useMemo } from "react";
-import { ChevronDown } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { MdSearch } from "react-icons/md";
+import {
+  mask_mods,
+  ModifierPicker
+} from "./ModifierPicker";
+import { useTranslation } from "react-i18next";
 
 export interface HidUsagePage {
   id: number;
@@ -31,82 +25,25 @@ export interface HidUsagePickerProps {
   value?: number;
   usagePages: HidUsagePage[];
   onValueChanged: (value?: number) => void;
+  showModifiers?: boolean;
+  searchTerm?: string;
+  onSearchTermChanged?: (term: string) => void;
 }
 
-type UsageSectionProps = HidUsagePage;
 
-const UsageSection = ({ id, min, max }: UsageSectionProps) => {
-  const info = useMemo(() => hid_usage_page_get_ids(id), [id]);
 
-  let usages = useMemo(() => {
-    let usages = info?.UsageIds || [];
-    if (max || min) {
-      usages = usages.filter(
-        (i) =>
-          (i.Id <= (max || Number.MAX_SAFE_INTEGER) && i.Id >= (min || 0)) ||
-          (id === 7 && i.Id >= 0xe0 && i.Id <= 0xe7)
-      );
-    }
-
-    return usages;
-  }, [id, min, max, info]);
-
-  return (
-    <Section id={id}>
-      <Header className="text-base-content/50">{info?.Name}</Header>
-      <Collection items={usages}>
-        {(i) => (
-          <ListBoxItem
-            className="rac-hover:bg-base-300 pl-3 relative rac-focus:bg-base-300 cursor-default select-none rac-selected:before:content-['✔'] before:absolute before:left-[0] before:top-[0]"
-            id={hid_usage_from_page_and_id(id, i.Id)}
-          >
-            {i.Name}
-          </ListBoxItem>
-        )}
-      </Collection>
-    </Section>
-  );
-};
-
-enum Mods {
-  LeftControl = 0x01,
-  LeftShift = 0x02,
-  LeftAlt = 0x04,
-  LeftGUI = 0x08,
-  RightControl = 0x10,
-  RightShift = 0x20,
-  RightAlt = 0x40,
-  RightGUI = 0x80,
-}
-
-const mod_labels: Record<Mods, string> = {
-  [Mods.LeftControl]: "L Ctrl",
-  [Mods.LeftShift]: "L Shift",
-  [Mods.LeftAlt]: "L Alt",
-  [Mods.LeftGUI]: "L GUI",
-  [Mods.RightControl]: "R Ctrl",
-  [Mods.RightShift]: "R Shift",
-  [Mods.RightAlt]: "R Alt",
-  [Mods.RightGUI]: "R GUI",
-};
-
-const all_mods = [
-  Mods.LeftControl,
-  Mods.LeftShift,
-  Mods.LeftAlt,
-  Mods.LeftGUI,
-  Mods.RightControl,
-  Mods.RightShift,
-  Mods.RightAlt,
-  Mods.RightGUI,
-];
-
-function mods_to_flags(mods: Mods[]): number {
-  return mods.reduce((a, v) => a + v, 0);
-}
-
-function mask_mods(value: number) {
-  return value & ~(mods_to_flags(all_mods) << 24);
+function getTabForUsage(page: number, id: number): string {
+  if (page === 0x07) {
+    if (id >= 0x04 && id <= 0x1d) return "alpha";
+    if ((id >= 0x1e && id <= 0x27) || (id >= 0x59 && id <= 0x61)) return "num";
+    if ((id >= 0x3a && id <= 0x45) || (id >= 0x68 && id <= 0x73)) return "func";
+    if ([0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38].includes(id)) return "sym";
+    if ([0x4f, 0x50, 0x51, 0x52, 0x4a, 0x4b, 0x4d, 0x4e, 0x49, 0x4c, 0x46, 0x47, 0x48].includes(id)) return "nav";
+    if (id >= 0xe0 && id <= 0xe7) return "mods";
+    return "other";
+  }
+  if (page === 0x0c) return "media";
+  return "other";
 }
 
 export const HidUsagePicker = ({
@@ -114,79 +51,200 @@ export const HidUsagePicker = ({
   value,
   usagePages,
   onValueChanged,
+  showModifiers = true,
+  searchTerm = "",
+  onSearchTermChanged,
 }: HidUsagePickerProps) => {
-  const mods = useMemo(() => {
-    let flags = value ? value >> 24 : 0;
+  const { t } = useTranslation();
+  const [activeTab, setActiveTab] = useState("alpha");
 
-    return all_mods.filter((m) => m & flags).map((m) => m.toLocaleString());
+  const TABS = [
+    { id: "alpha", label: t("hid.alpha") },
+    { id: "num", label: t("hid.num") },
+    { id: "nav", label: t("hid.nav") },
+    { id: "func", label: t("hid.func") },
+    { id: "sym", label: t("hid.sym") },
+    { id: "media", label: t("hid.media") },
+    { id: "mods", label: t("hid.mods") },
+    { id: "other", label: t("hid.other") },
+  ];
+
+  const rawUsageValue = value ? mask_mods(value) : undefined;
+
+  // Flatten all available usages
+  const allUsages = useMemo(() => {
+    let result: { page: number; id: number; name: string; shortName?: string }[] = [];
+
+    for (const p of usagePages) {
+      const info = hid_usage_page_get_ids(p.id);
+      if (!info) continue;
+
+      let ids = info.UsageIds;
+      if (p.max || p.min) {
+        ids = ids.filter(i =>
+          (i.Id <= (p.max || Number.MAX_SAFE_INTEGER) && i.Id >= (p.min || 0)) ||
+          (p.id === 0x07 && i.Id >= 0xe0 && i.Id <= 0xe7) // Always include mods if keyboard page
+        );
+      }
+
+      ids.forEach(u => {
+        const labels = hid_usage_get_labels(p.id, u.Id);
+        let name = labels.long || labels.med || labels.short || u.Name;
+        let shortName = labels.short || u.Name;
+
+        // --- Name Cleanup Logic (Modified to apply to shortName as well) ---
+        if (name.startsWith("Keyboard ")) name = name.replace(/^Keyboard /, "");
+        if (shortName.startsWith("Keyboard ")) shortName = shortName.replace(/^Keyboard /, "");
+
+        if (name.startsWith("Keypad ") && name.length > 7) name = name.replace(/^Keypad /, "KP ");
+        if (shortName.startsWith("Keypad ") && shortName.length > 7) shortName = shortName.replace(/^Keypad /, "KP ");
+
+        result.push({
+          page: p.id,
+          id: u.Id,
+          name: name,
+          shortName: shortName
+        });
+      });
+    }
+    return result;
+  }, [usagePages]);
+
+  // Filter based on Tab or Search
+  const displayUsages = useMemo(() => {
+    if (searchTerm) {
+      const lower = searchTerm.toLowerCase();
+      return allUsages.filter(u =>
+        u.name.toLowerCase().includes(lower) ||
+        (u.shortName && u.shortName.toLowerCase().includes(lower)) ||
+        (lower.startsWith("0x") && u.id.toString(16).includes(lower.substring(2)))
+      );
+    }
+    return allUsages.filter(u => getTabForUsage(u.page, u.id) === activeTab);
+  }, [allUsages, searchTerm, activeTab]);
+
+  // Auto-select tab logic
+  useEffect(() => {
+    // Only run if value is set and not zero/empty
+    if (value !== undefined) {
+      const cleanValue = mask_mods(value);
+      const page = (cleanValue >> 16) & 0xFFFF;
+      const id = cleanValue & 0xFFFF;
+
+      // Check if it's a valid usage (non-zero)
+      if ((page << 16 | id) !== 0) {
+        const tab = getTabForUsage(page, id);
+        // If we found a specific tab (even 'other'), switch to it.
+        // This ensures that when a user clicks a key with 'F1', it goes to Functions.
+        if (tab) {
+          setActiveTab(tab);
+        }
+      }
+    }
   }, [value]);
 
-  const selectionChanged = useCallback(
-    (e: Key | null) => {
-      let value = typeof e == "number" ? e : undefined;
-      if (value !== undefined) {
-        let mod_flags = mods_to_flags(mods.map((m) => parseInt(m)));
-        value = value | (mod_flags << 24);
-      }
-
-      onValueChanged(value);
-    },
-    [onValueChanged, mods]
-  );
-
-  const modifiersChanged = useCallback(
-    (m: string[]) => {
-      if (!value) {
-        return;
-      }
-
-      let mod_flags = mods_to_flags(m.map((m) => parseInt(m)));
-      let new_value = mask_mods(value) | (mod_flags << 24);
-      onValueChanged(new_value);
-    },
-    [value]
-  );
+  const handleUsageSelect = (page: number, id: number) => {
+    let base = (page << 16) | id;
+    // Preserve existing mods from the current value
+    let current_mods = value ? (value >> 24) : 0;
+    onValueChanged(base | (current_mods << 24));
+  };
 
   return (
-    <div className="flex gap-2 relative">
-      {label && <Label id="hid-usage-picker">{label}:</Label>}
-      <ComboBox
-        selectedKey={value ? mask_mods(value) : null}
-        onSelectionChange={selectionChanged}
-        aria-labelledby="hid-usage-picker"
-      >
-        <div className="flex">
-          <Input className="p-1 rounded-l" />
-          <Button className="rounded-r bg-primary text-primary-content w-8 h-8 flex justify-center items-center">
-            <ChevronDown className="size-4" />
-          </Button>
+    <div className="flex flex-col gap-4 h-full w-full font-sans">
+      {/* Top Bar: Tabs + Inline Search */}
+      <div className="flex items-center gap-4 shrink-0 px-2 py-3">
+        {/* Tabs - Sleek, pill shaped chips */}
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-1 items-center p-1">
+          {TABS.map(tab => (
+            <Button
+              key={tab.id}
+              onPress={() => setActiveTab(tab.id)}
+              className={`
+                                px-4 py-1.5 rounded-full text-xs font-bold transition-all border shrink-0 outline-none
+                                ${(!searchTerm && activeTab === tab.id)
+                  ? 'bg-primary text-primary-content border-transparent scale-105 shadow-sm'
+                  : 'bg-base-200/50 border-transparent text-base-content/60 hover:bg-base-200 hover:text-base-content'
+                }
+                            `}
+            >
+              {tab.label}
+            </Button>
+          ))}
         </div>
-        <Popover className="w-[var(--trigger-width)] max-h-4 shadow-md text-base-content rounded border-base-content bg-base-100">
-          <ListBox
-            items={usagePages}
-            className="block max-h-[30vh] min-h-[unset] overflow-auto p-2"
-            selectionMode="single"
-          >
-            {({ id, min, max }) => <UsageSection id={id} min={min} max={max} />}
-          </ListBox>
-        </Popover>
-      </ComboBox>
-      <CheckboxGroup
-        aria-label="Implicit Modifiers"
-        className="grid grid-flow-col gap-x-px auto-cols-[minmax(min-content,1fr)] content-stretch divide-x rounded-md"
-        value={mods}
-        onChange={modifiersChanged}
-      >
-        {all_mods.map((m) => (
-          <Checkbox
-            key={m}
-            value={m.toLocaleString()}
-            className="text-nowrap cursor-pointer grid px-2 content-center justify-center rac-selected:bg-primary border-base-100 bg-base-300 hover:bg-base-100 first:rounded-s-md last:rounded-e-md rac-selected:text-primary-content"
-          >
-            {mod_labels[m]}
-          </Checkbox>
-        ))}
-      </CheckboxGroup>
+
+        {/* Search Input - MD3 Search Bar */}
+        <div className="relative group w-48 shrink-0">
+          <MdSearch className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-base-content/40 group-focus-within:text-primary transition-colors" />
+          <Input
+            value={searchTerm}
+            onChange={(e) => onSearchTermChanged?.(e.target.value)}
+            placeholder={t("hid.filter")}
+            className="w-full bg-base-300/60 hover:bg-base-300 border border-base-content/10 focus:border-primary/40 rounded-full pl-10 pr-4 py-2 text-sm font-medium outline-none transition-all placeholder:text-base-content/40 focus:bg-base-100"
+          />
+        </div>
+      </div>
+
+      {/* Grid Content - With padding to prevent hover clipping */}
+      <div className="flex-1 overflow-y-auto min-h-[240px] custom-scrollbar p-2">
+        {displayUsages.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-base-content/30 gap-3">
+            <div className="w-16 h-16 rounded-full bg-base-200/50 flex items-center justify-center animate-pulse">
+              <MdSearch size={24} className="opacity-50" />
+            </div>
+            <span className="text-sm font-medium">{t("behaviors.noResults")}</span>
+          </div>
+        ) : (
+          <div className={`grid gap-2 ${activeTab === 'media' || searchTerm ? 'grid-cols-2' : 'grid-cols-8 lg:grid-cols-10 xl:grid-cols-12'}`}>
+            {displayUsages.map(u => {
+              const usageVal = (u.page << 16) | u.id;
+              const isSelected = rawUsageValue === usageVal;
+
+              if (activeTab === 'media' || searchTerm) {
+                return (
+                  <Button
+                    key={`${u.page}-${u.id}`}
+                    onPress={() => handleUsageSelect(u.page, u.id)}
+                    className={`
+                                            flex items-center justify-between px-4 py-3 rounded-2xl border text-left transition-all text-xs font-bold outline-none group
+                                            ${isSelected
+                        ? 'bg-primary/30 text-primary border-transparent shadow-none'
+                        : 'bg-base-300/50 border-transparent hover:bg-base-300 hover:text-base-content'
+                      }
+                                        `}
+                  >
+                    <span className={`truncate ${isSelected ? 'text-primary' : 'text-base-content/90'}`}>{u.name}</span>
+                    {searchTerm && <span className={`text-[10px] font-mono ml-2 ${isSelected ? 'opacity-80' : 'opacity-40'}`}>{(u.page << 16 | u.id).toString(16)}</span>}
+                  </Button>
+                )
+              }
+
+              return (
+                <Button
+                  key={`${u.page}-${u.id}`}
+                  onPress={() => handleUsageSelect(u.page, u.id)}
+                  className={`
+                                        aspect-[1/1] flex flex-col items-center justify-center p-1 rounded-2xl border transition-all outline-none
+                                        ${isSelected
+                      ? 'bg-primary/30 text-primary border-transparent shadow-none scale-105 z-10'
+                      : 'bg-base-300/50 border-transparent hover:bg-base-300 hover:text-base-content hover:scale-105'
+                    }
+                                    `}
+                >
+                  <span className={`text-xs font-bold text-center leading-tight break-words ${isSelected ? 'text-primary' : 'text-base-content/90'}`}>{u.shortName || u.name}</span>
+                </Button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Internal Modifiers Footer (Optional - uses shared logic) */}
+      {showModifiers && (
+        <div className="pt-4 border-t border-base-content/5 mt-auto">
+          <ModifierPicker value={value} onValueChanged={onValueChanged} vertical={false} />
+        </div>
+      )}
     </div>
   );
 };

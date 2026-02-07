@@ -81,6 +81,12 @@ export function useUndoRedo(): [
   return [doIt, undo, redo, canUndo, canRedo, reset];
 }
 
-export const UndoRedoContext = createContext<
-  ((dc: DoCallback) => Promise<void>) | null
->(null);
+export interface UndoRedoContextType {
+  doIt: (dc: DoCallback) => Promise<void>;
+  undo: () => Promise<void>;
+  redo: () => Promise<void>;
+  canUndo: boolean;
+  canRedo: boolean;
+}
+
+export const UndoRedoContext = createContext<UndoRedoContextType | null>(null);

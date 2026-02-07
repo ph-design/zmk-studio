@@ -7,7 +7,7 @@ import {
   faWindows,
   IconDefinition,
 } from "@fortawesome/free-brands-svg-icons";
-import { DownloadIcon } from "lucide-react";
+import { MdFileDownload } from "react-icons/md";
 import releaseData from "./data/release-data.json";
 
 type Platform = "windows" | "mac" | "linux" | "ios" | "android" | "unknown";
@@ -130,7 +130,7 @@ export const Download = () => {
                   href={getUrlFromPattern(ReleaseAssets, link.urlPattern)}
                   className="p-3 text-lg bg-primary hover:opacity-85 active:opacity-70 text-primary-content rounded-lg justify-center items-center gap-3 flex"
                 >
-                  <FontAwesomeIcon icon={PlatformMetadata[platform].icon} className="h-6"/>{" "}
+                  <FontAwesomeIcon icon={PlatformMetadata[platform].icon} className="h-6" />{" "}
                   Download for {link.name}
                 </a>
               ))}
@@ -156,7 +156,7 @@ export const Download = () => {
                       href={getUrlFromPattern(ReleaseAssets, link.urlPattern)}
                       className="flex gap-1 mb-3 text-base-content hover:underline"
                     >
-                      <DownloadIcon className="w-5" />
+                      <MdFileDownload size={20} className="w-5" />
                       {link.name}
                     </a>
                   ))}

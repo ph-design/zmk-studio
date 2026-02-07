@@ -6,7 +6,9 @@
     "redo": "重做",
     "language": "语言",
     "cancel": "取消",
-    "close": "关闭"
+    "close": "关闭",
+    "loading": "加载中...",
+    "model": "型号"
   },
   "welcome": {
     "title": "欢迎使用 ZMK Studio",
@@ -59,5 +61,65 @@
     "failedToSave": "保存更改失败",
     "failedToDiscard": "放弃更改失败",
     "failedToReset": "重置设置失败"
+  },
+  "layers": {
+    "title": "层级",
+    "add": "添加层级",
+    "select": "选择层级",
+    "target": "目标层级",
+    "rename": "重命名层级",
+    "delete": "删除层级",
+    "none": "未找到匹配层级"
+  },
+  "categories": {
+    "basic": "基础按键",
+    "layers": "层级切换",
+    "mods": "修饰键",
+    "conn": "蓝牙连接",
+    "media": "系统功能",
+    "lighting": "灯效控制",
+    "other": "其他"
+  },
+  "behaviors": {
+    "hold": "长按 (修饰键)",
+    "tap": "短按 (普通按键)",
+    "editBinding": "编辑按键绑定",
+    "configuration": "配置",
+    "selectToConfigure": "选择按键以配置",
+    "selectToConfigureDesc": "点击上方虚拟键盘中的任何按键以修改其行为、分配层级或配置特殊功能。",
+    "search": "搜索行为...",
+    "searchLayers": "搜索层级...",
+    "noResults": "无结果",
+    "noOptions": "无匹配选项",
+    "list": "备选行为",
+    "params": "详细配置"
+  },
+  "hid": {
+    "alpha": "字母",
+    "num": "数字",
+    "nav": "导览",
+    "func": "功能",
+    "sym": "符号",
+    "media": "系统",
+    "mods": "修饰",
+    "other": "其他",
+    "filter": "筛选..."
+  },
+  "settings": {
+    "theme": "主题",
+    "darkMode": "深色模式",
+    "lightMode": "浅色模式",
+    "systemMode": "跟随系统",
+    "reset": "恢复出厂设置",
+    "confirmReset": "确定要重置吗？",
+    "about": "关于 ZMK Studio"
+  },
+  "status": {
+    "locked": "已锁定",
+    "unlocked": "已解锁",
+    "ready": "就绪",
+    "connected": "已连接",
+    "unsavedChanges": "未保存的更改",
+    "waitingForUnlock": "等待解锁..."
   }
 }

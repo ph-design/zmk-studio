@@ -1,4 +1,3 @@
-import React from "react";
 import { useModalRef } from "./misc/useModalRef";
 
 import cannonKeys from "./assets/cannonkeys.png";
@@ -181,75 +180,105 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
   const { t } = useTranslation();
 
   return (
-    <GenericModal ref={ref} className="min-w-min w-[70vw]" onClose={onClose}>
-      <div className="flex justify-between items-start">
-        <p>
-          {t("about.project")} {" "}
-          <ExternalLink href="https://zmk.dev/">{t("about.website")}</ExternalLink>, {" "}
-          <ExternalLink href="https://github.com/zmkfirmware/zmk/issues/">
-            {t("about.issues")}
-          </ExternalLink>
-          ,{" "}
-          <ExternalLink href="https://zmk.dev/community/discord/invite">
-            {t("about.discord")}
-          </ExternalLink>
-        </p>
+    <GenericModal ref={ref} className="w-[600px] max-w-[90vw] p-0 overflow-hidden bg-base-100 rounded-3xl shadow-2xl" onClose={onClose}>
+
+      {/* Header */}
+      <div className="px-6 py-4 border-b border-base-content/5 flex items-center justify-between bg-base-100 sticky top-0 z-10">
+        <h2 className="text-xl font-black tracking-tight text-base-content">
+          {t("settings.about")}
+        </h2>
         <button
-          className="p-1.5 rounded-md bg-gray-100 text-black hover:bg-gray-300"
           onClick={onClose}
+          className="p-2 rounded-full hover:bg-base-content/10 transition-colors text-base-content/60 hover:text-base-content outline-none"
+          aria-label={t("common.close")}
         >
-          {t("common.close")}
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
         </button>
       </div>
-      <div>
-        <p className="py-1 mr-2">
-          ZMK Studio is made possible thanks to the generous donation of time
-          from our contributors, as well as the financial sponsorship from the
-          following vendors:
-        </p>
-      </div>
-      <div className="grid gap-2 auto-rows-auto grid-cols-[auto_minmax(min-content,1fr)] justify-items-center items-center">
-        {sponsors.map((s) => {
-          const heightVariants = {
-            [SponsorSize.Large]: "h-16",
-            [SponsorSize.Medium]: "h-12",
-            [SponsorSize.Small]: "h-8",
-          };
 
-          return (
-            <React.Fragment key={s.level}>
-              <label>{s.level}</label>
-              <div
-                className={`grid grid-rows-1 gap-x-1 auto-cols-fr grid-flow-col justify-items-center items-center ${
-                  heightVariants[s.size]
-                }`}
-              >
-                {s.vendors.map((v) => {
-                  const maxSizeVariants = {
-                    [SponsorSize.Large]: "max-h-16",
-                    [SponsorSize.Medium]: "max-h-12",
-                    [SponsorSize.Small]: "max-h-8",
-                  };
+      <div className="p-6 overflow-y-auto max-h-[70vh] space-y-8 custom-scrollbar">
 
-                  return (
-                    <a key={v.name} href={v.url} target="_blank">
-                      <picture aria-label={v.name}>
-                        {v.darkModeImg && (
-                          <source
-                            className={maxSizeVariants[s.size]}
-                            srcSet={v.darkModeImg}
-                            media="(prefers-color-scheme: dark)"
-                          />
-                        )}
-                        <img className={maxSizeVariants[s.size]} src={v.img} />
-                      </picture>
-                    </a>
-                  );
-                })}
-              </div>
-            </React.Fragment>
-          );
-        })}
+        {/* Project Info Section */}
+        <div className="space-y-4">
+          <p className="text-sm font-medium text-base-content/70 leading-relaxed">
+            {t("about.project")}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <ExternalLink href="https://zmk.dev/" className="px-4 py-2 rounded-xl bg-base-200 hover:bg-primary/10 hover:text-primary transition-colors text-sm font-bold flex items-center gap-2 no-underline">
+              {t("about.website")}
+            </ExternalLink>
+            <ExternalLink href="https://github.com/zmkfirmware/zmk/issues/" className="px-4 py-2 rounded-xl bg-base-200 hover:bg-primary/10 hover:text-primary transition-colors text-sm font-bold flex items-center gap-2 no-underline">
+              {t("about.issues")}
+            </ExternalLink>
+            <ExternalLink href="https://zmk.dev/community/discord/invite" className="px-4 py-2 rounded-xl bg-base-200 hover:bg-primary/10 hover:text-primary transition-colors text-sm font-bold flex items-center gap-2 no-underline">
+              {t("about.discord")}
+            </ExternalLink>
+          </div>
+        </div>
+
+        {/* Sponsors Section */}
+        <div className="space-y-4">
+          <div className="flex flex-col gap-1">
+            <h3 className="text-lg font-bold text-base-content">{t("about.sponsors", "Sponsors")}</h3>
+            <p className="text-xs text-base-content/50">
+              ZMK Studio is made possible thanks to the generous donation of time from our contributors and financial sponsorship from these vendors.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-6">
+            {sponsors.map((s) => {
+              const heightVariants = {
+                [SponsorSize.Large]: "h-12",
+                [SponsorSize.Medium]: "h-10",
+                [SponsorSize.Small]: "h-8",
+              };
+
+              return (
+                <div key={s.level} className="flex flex-col gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-primary/80 bg-primary/10 px-2 py-1 rounded-md">
+                      {s.level}
+                    </span>
+                    <div className="h-[1px] flex-1 bg-base-content/5"></div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {s.vendors.map((v) => {
+
+                      return (
+                        <a
+                          key={v.name}
+                          href={v.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="group p-4 bg-base-200/50 hover:bg-base-200 rounded-xl transition-all hover:shadow-sm border border-transparent hover:border-base-content/5 flex items-center justify-center grayscale hover:grayscale-0 opacity-70 hover:opacity-100"
+                        >
+                          <picture aria-label={v.name} className="w-full flex items-center justify-center">
+                            {v.darkModeImg && (
+                              <source
+                                className={`${heightVariants[s.size]} w-auto object-contain transition-transform group-hover:scale-105`}
+                                srcSet={v.darkModeImg}
+                                media="(prefers-color-scheme: dark)"
+                              />
+                            )}
+                            <img
+                              className={`${heightVariants[s.size]} w-auto object-contain transition-transform group-hover:scale-105`}
+                              src={v.img}
+                              alt={v.name}
+                            />
+                          </picture>
+                        </a>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </GenericModal>
   );

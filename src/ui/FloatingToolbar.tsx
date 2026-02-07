@@ -1,5 +1,5 @@
 import { Button, Menu, MenuItem, MenuTrigger, Popover } from "react-aria-components";
-import { Languages, LogOut, RotateCcw, Save, Settings, Trash2, Undo2, Redo2 } from "lucide-react";
+import { MdLanguage, MdLogout, MdReplay, MdSave, MdSettings, MdDelete, MdUndo, MdRedo } from "react-icons/md";
 import { useTranslation } from "react-i18next";
 import { Tooltip } from "../misc/Tooltip";
 
@@ -42,15 +42,15 @@ export const FloatingToolbar = ({
                     {connectedDeviceLabel && (
                         <MenuTrigger>
                             <Button className="ml-1 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-base-300 text-base-content/40 transition-colors">
-                                <Settings size={14} />
+                                <MdSettings size={14} />
                             </Button>
                             <Popover placement="bottom start">
                                 <Menu className="surface-panel p-1 rounded-xl flex flex-col min-w-[160px] shadow-xl animate-in fade-in zoom-in-95 duration-200">
                                     <MenuItem onAction={onDisconnect} className="p-2.5 hover:bg-base-300 rounded-lg flex items-center gap-3 text-sm cursor-pointer outline-none transition-colors">
-                                        <LogOut size={16} className="text-base-content/40" /> {t("header.disconnect")}
+                                        <MdLogout size={16} className="text-base-content/40" /> {t("header.disconnect")}
                                     </MenuItem>
                                     <MenuItem onAction={onResetSettings} className="p-2.5 hover:bg-red-500/10 hover:text-red-500 rounded-lg flex items-center gap-3 text-sm cursor-pointer outline-none transition-colors">
-                                        <RotateCcw size={16} /> {t("header.restoreStock")}
+                                        <MdReplay size={16} /> {t("header.restoreStock")}
                                     </MenuItem>
                                 </Menu>
                             </Popover>
@@ -66,12 +66,12 @@ export const FloatingToolbar = ({
                     <div className="surface-panel h-11 px-1 flex items-center shadow-md">
                         <Tooltip label={t("common.undo")}>
                             <Button isDisabled={!canUndo} onPress={onUndo} className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-base-300 disabled:opacity-20 transition-all">
-                                <Undo2 size={18} />
+                                <MdUndo size={18} />
                             </Button>
                         </Tooltip>
                         <Tooltip label={t("common.redo")}>
                             <Button isDisabled={!canRedo} onPress={onRedo} className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-base-300 disabled:opacity-20 transition-all">
-                                <Redo2 size={18} />
+                                <MdRedo size={18} />
                             </Button>
                         </Tooltip>
                     </div>
@@ -82,7 +82,7 @@ export const FloatingToolbar = ({
                     <div className="surface-panel h-11 px-1 flex items-center shadow-md gap-1">
                         <Tooltip label={t("common.discard")}>
                             <Button isDisabled={!unsaved} onPress={onDiscard} className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-red-500/10 text-red-500 disabled:opacity-20 transition-all">
-                                <Trash2 size={18} />
+                                <MdDelete size={18} />
                             </Button>
                         </Tooltip>
                         <Tooltip label={t("common.save")}>
@@ -90,7 +90,7 @@ export const FloatingToolbar = ({
                                 isDisabled={!unsaved}
                                 onPress={onSave}
                                 className={`h-9 px-4 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${unsaved ? 'bg-primary text-primary-content shadow-sm' : 'bg-base-300 text-base-content/20'}`}>
-                                <Save size={14} className="inline mr-2" />
+                                <MdSave size={14} className="inline mr-2" />
                                 {t("common.save")}
                             </Button>
                         </Tooltip>
@@ -101,7 +101,7 @@ export const FloatingToolbar = ({
                 <div className="surface-panel h-11 px-1 flex items-center shadow-md">
                     <MenuTrigger>
                         <Button className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-base-300 transition-colors">
-                            <Languages size={18} />
+                            <MdLanguage size={18} />
                         </Button>
                         <Popover placement="bottom end">
                             <Menu className="surface-panel p-1 rounded-xl flex flex-col min-w-[120px] shadow-xl animate-in fade-in zoom-in-95 duration-200">

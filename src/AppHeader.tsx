@@ -1,196 +1,128 @@
+import { useRef } from "react";
 import {
   Button,
   Menu,
   MenuItem,
   MenuTrigger,
   Popover,
+  Separator,
+  Toolbar,
 } from "react-aria-components";
-import { useConnectedDeviceData } from "./rpc/useConnectedDeviceData";
-import { useSub } from "./usePubSub";
-import { useContext, useEffect, useState } from "react";
-import { useModalRef } from "./misc/useModalRef";
-import { LockStateContext } from "./rpc/LockStateContext";
-import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
-import { ConnectionContext } from "./rpc/ConnectionContext";
-import { ChevronDown, Undo2, Redo2, Save, Trash2, Languages } from "lucide-react";
-import { Tooltip } from "./misc/Tooltip";
-import { GenericModal } from "./GenericModal";
 import { useTranslation } from "react-i18next";
+import { MdKeyboardArrowDown, MdUndo, MdRedo, MdSave, MdDelete, MdLanguage } from "react-icons/md";
 
-export interface AppHeaderProps {
-  connectedDeviceLabel?: string;
-  onSave?: () => void | Promise<void>;
-  onDiscard?: () => void | Promise<void>;
-  onUndo?: () => Promise<void>;
-  onRedo?: () => Promise<void>;
-  onResetSettings?: () => void | Promise<void>;
-  onDisconnect?: () => void | Promise<void>;
-  canUndo?: boolean;
-  canRedo?: boolean;
-}
+import { useKeymapStore } from "./store";
+import { KeyboardNameEditor } from "./keyboard/KeyboardNameEditor";
 
-export const AppHeader = ({
-  connectedDeviceLabel,
-  canRedo,
-  canUndo,
-  onRedo,
-  onUndo,
-  onSave,
-  onDiscard,
-  onDisconnect,
-  onResetSettings,
-}: AppHeaderProps) => {
-  const { t, i18n } = useTranslation();
-  const [showSettingsReset, setShowSettingsReset] = useState(false);
+export const AppHeader = () => {
+  const {
+    canUndo,
+    canRedo,
+    undo,
+    redo,
+    isDirty,
+    save,
+    clear,
+    name,
+    setName,
+  } = useKeymapStore((s) => ({
+    canUndo: s.pastStates.length > 0,
+    canRedo: s.futureStates.length > 0,
+    undo: s.undo,
+    redo: s.redo,
+    isDirty: s.isDirty,
+    save: s.save(s),
+    clear: s.clear,
+    name: s.keymap?.name,
+    setName: s.setName,
+  }));
 
-  const lockState = useContext(LockStateContext);
-  const connectionState = useContext(ConnectionContext);
+  const { i18n } = useTranslation();
 
-  useEffect(() => {
-    if (
-      (!connectionState.conn ||
-        lockState != LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED) &&
-      showSettingsReset
-    ) {
-      setShowSettingsReset(false);
-    }
-  }, [lockState, showSettingsReset]);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
-  const showSettingsRef = useModalRef(showSettingsReset);
-  const [unsaved, setUnsaved] = useConnectedDeviceData<boolean>(
-    { keymap: { checkUnsavedChanges: true } },
-    (r) => r.keymap?.checkUnsavedChanges
-  );
-
-  useSub("rpc_notification.keymap.unsavedChangesStatusChanged", (unsaved) =>
-    setUnsaved(unsaved)
-  );
+  // Helper to handle language change since Menu onAction returns Key
+  const handleLanguageChange = (key: React.Key) => {
+    i18n.changeLanguage(key as string);
+  };
 
   return (
-    <header className="top-0 left-0 right-0 grid grid-cols-[1fr_auto_1fr] items-center justify-between h-10 max-w-full">
-      <div className="flex px-3 items-center gap-1">
-        <img src="/zmk.svg" alt="ZMK Logo" className="h-8 rounded" />
-        <p>{t("header.studio")}</p>
-      </div>
-      <GenericModal ref={showSettingsRef} className="max-w-[50vw]">
-        <h2 className="my-2 text-lg">{t("header.resetSettings")}</h2>
-        <div>
-          <p>{t("header.resetWarning")}</p>
-          <p>{t("header.continue")}</p>
-          <div className="flex justify-end my-2 gap-3">
-            <Button
-              className="rounded bg-base-200 hover:bg-base-300 px-3 py-2"
-              onPress={() => setShowSettingsReset(false)}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button
-              className="rounded bg-base-200 hover:bg-base-300 px-3 py-2"
-              onPress={() => {
-                setShowSettingsReset(false);
-                onResetSettings?.();
-              }}
-            >
-              {t("header.restoreStock")}
-            </Button>
-          </div>
+    <div className="flex items-center justify-between px-4 py-2 shrink-0 h-14 bg-base-100 border-b border-base-content/5 z-20">
+      <div className="flex items-center gap-4">
+        <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
+          <div className="w-4 h-4 rounded-full bg-current" />
         </div>
-      </GenericModal>
-      <MenuTrigger>
-        <Button
-          className="text-center rac-disabled:opacity-0 hover:bg-base-300 transition-all duration-100 p-1 pl-2 rounded-lg"
-          isDisabled={!connectedDeviceLabel}
-        >
-          {connectedDeviceLabel}
-          <ChevronDown className="inline-block w-4" />
-        </Button>
-        <Popover>
-          <Menu className="shadow-md rounded bg-base-100 text-base-content cursor-pointer overflow-hidden">
-            <MenuItem
-              className="px-2 py-1 hover:bg-base-200"
-              onAction={onDisconnect}
-            >
-              {t("header.disconnect")}
-            </MenuItem>
-            <MenuItem
-              className="px-2 py-1 hover:bg-base-200"
-              onAction={() => setShowSettingsReset(true)}
-            >
-              {t("header.restoreStock")}
-            </MenuItem>
-          </Menu>
-        </Popover>
-      </MenuTrigger>
-      <div className="flex justify-end gap-1 px-2">
-        <Tooltip label={t("common.language")}>
-          <MenuTrigger>
-            <Button
-              isDisabled={!connectionState.conn}
-              className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
-            >
-              <Languages className="inline-block w-4" aria-label="Language" />
-            </Button>
-            <Popover>
-              <Menu className="shadow-md rounded bg-base-100 text-base-content cursor-pointer overflow-hidden">
-                <MenuItem
-                  className="px-2 py-1 hover:bg-base-200"
-                  onAction={() => i18n.changeLanguage("en")}
-                >
-                  English
-                </MenuItem>
-                <MenuItem
-                  className="px-2 py-1 hover:bg-base-200"
-                  onAction={() => i18n.changeLanguage("zh")}
-                >
-                  中文
-                </MenuItem>
-              </Menu>
-            </Popover>
-          </MenuTrigger>
-        </Tooltip>
-
-        {onUndo && (
-          <Tooltip label={t("common.undo")}>
-            <Button
-              className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
-              isDisabled={!canUndo}
-              onPress={onUndo}
-            >
-              <Undo2 className="inline-block w-4 mx-1" aria-label="Undo" />
-            </Button>
-          </Tooltip>
-        )}
-
-        {onRedo && (
-          <Tooltip label={t("common.redo")}>
-            <Button
-              className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
-              isDisabled={!canRedo}
-              onPress={onRedo}
-            >
-              <Redo2 className="inline-block w-4 mx-1" aria-label="Redo" />
-            </Button>
-          </Tooltip>
-        )}
-        <Tooltip label={t("common.save")}>
-          <Button
-            className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
-            isDisabled={!unsaved}
-            onPress={onSave}
-          >
-            <Save className="inline-block w-4 mx-1" aria-label="Save" />
-          </Button>
-        </Tooltip>
-        <Tooltip label={t("common.discard")}>
-          <Button
-            className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
-            onPress={onDiscard}
-            isDisabled={!unsaved}
-          >
-            <Trash2 className="inline-block w-4 mx-1" aria-label="Discard" />
-          </Button>
-        </Tooltip>
+        <div className="h-6 w-px bg-base-content/10" />
+        <KeyboardNameEditor name={name ?? "Untitled"} setName={setName} />
       </div>
-    </header>
+
+      <div className="flex items-center gap-2">
+        <Button
+          className={`
+            w-9 h-9 flex items-center justify-center rounded-lg transition-all outline-none
+            ${!canUndo ? 'text-base-content/30 cursor-not-allowed' : 'text-base-content/70 hover:bg-base-200 hover:text-base-content active:scale-95'}
+          `}
+          isDisabled={!canUndo}
+          onPress={undo}
+        >
+          <MdUndo size={20} />
+        </Button>
+        <Button
+          className={`
+            w-9 h-9 flex items-center justify-center rounded-lg transition-all outline-none
+            ${!canRedo ? 'text-base-content/30 cursor-not-allowed' : 'text-base-content/70 hover:bg-base-200 hover:text-base-content active:scale-95'}
+          `}
+          isDisabled={!canRedo}
+          onPress={redo}
+        >
+          <MdRedo size={20} />
+        </Button>
+
+        <div className="h-6 w-px bg-base-content/10 mx-2" />
+
+        <Button
+          className={`
+            h-9 px-4 flex items-center gap-2 rounded-full font-medium text-sm transition-all outline-none
+            ${!isDirty
+              ? 'bg-base-200/50 text-base-content/40 cursor-not-allowed'
+              : 'bg-primary text-primary-content hover:bg-primary-hover shadow-sm active:scale-95'
+            }
+          `}
+          isDisabled={!isDirty}
+          onPress={save}
+        >
+          <MdSave size={18} />
+          <span>Save</span>
+        </Button>
+
+        <div className="h-6 w-px bg-base-content/10 mx-2" />
+
+        <MenuTrigger>
+          <Button className="w-9 h-9 flex items-center justify-center rounded-lg text-base-content/70 hover:bg-base-200 hover:text-base-content transition-all outline-none">
+            <MdLanguage size={20} />
+          </Button>
+          <Popover placement="bottom end" className="min-w-[150px] p-1 bg-base-200 border border-base-300 rounded-xl shadow-xl z-50 animate-in fade-in zoom-in-95 duration-200">
+            <Menu onAction={handleLanguageChange} className="outline-none">
+              <MenuItem id="en" className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-base-300 cursor-pointer outline-none transition-colors data-[focused]:bg-base-300">
+                <span className="text-sm font-medium">English</span>
+                {i18n.language === 'en' && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+              </MenuItem>
+              <MenuItem id="zh" className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-base-300 cursor-pointer outline-none transition-colors data-[focused]:bg-base-300">
+                <span className="text-sm font-medium">中文</span>
+                {i18n.language === 'zh' && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+              </MenuItem>
+            </Menu>
+          </Popover>
+        </MenuTrigger>
+
+        <Button
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-error/70 hover:bg-error/10 hover:text-error transition-all outline-none"
+          onPress={clear}
+        >
+          <MdDelete size={20} />
+        </Button>
+
+      </div>
+    </div>
   );
 };
