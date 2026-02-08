@@ -6,7 +6,9 @@
     "redo": "重做",
     "language": "语言",
     "cancel": "取消",
-    "close": "关闭"
+    "close": "关闭",
+    "add": "添加",
+    "remove": "移除"
   },
   "welcome": {
     "title": "欢迎使用 ZMK Studio",
@@ -24,7 +26,7 @@
   "header": {
     "settings": "设置",
     "resetSettings": "重置设置",
-    "resetWarning": "重置将移除在 ZMK Studio 中的所有自定义并恢复出厂键位",
+    "resetWarning": "重置将移除在 ZMK Studio 中的所有设置并恢复出厂键位",
     "continue": "继续吗？",
     "restoreStock": "恢复出厂设置",
     "disconnect": "断开连接",
@@ -33,15 +35,82 @@
     "studio": "Studio"
   },
   "footer": {
-    "copyright": "© 2024 - ZMK 贡献者",
+    "copyright": "© 2026 - ZMK 贡献者",
     "about": "关于 ZMK Studio",
-    "license": "License NOTICE"
+    "license": "许可证声明"
   },
   "about": {
     "project": "ZMK 项目：",
-    "website": "网站",
-    "issues": "GitHub 问题",
-    "discord": "Discord 服务器"
+    "website": "访问网站",
+    "issues": "GitHub Issues",
+    "discord": "Discord 社区",
+    "sponsorsDescription": "ZMK Studio 的开发离不开众多贡献者的无私付出，以及以下赞助商的鼎力支持："
+  },
+  "sponsorLevels": {
+    "platinum": "白金级",
+    "goldPlus": "金牌+",
+    "gold": "金牌",
+    "silver": "银牌",
+    "bronze": "铜牌",
+    "additional": "其他"
+  },
+  "layer": {
+    "label": "层级",
+    "newLayerName": "新层级名称",
+    "addFailed": "添加层级失败: {{error}}",
+    "removeFailed": "删除层级失败: {{error}}",
+    "restoreFailed": "恢复层级失败: {{error}}",
+    "renameFailed": "修改层级名称失败: {{error}}"
+  },
+  "keyboard": {
+    "layout": "布局",
+    "zoom": {
+      "auto": "自动"
+    },
+    "errors": {
+      "setActiveLayout": "设置活动物理布局失败",
+      "setBinding": "设置按键绑定失败",
+      "notConnected": "未连接",
+      "noKeymap": "未加载键名映射"
+    }
+  },
+  "binding": {
+    "layer": "层级",
+    "noParametersRequired": "无需参数",
+    "hold": "长按",
+    "tap": "点击"
+  },
+  "behavior": {
+    "category": {
+      "basic": "基础",
+      "layers": "层级",
+      "modifiers": "修饰键",
+      "bluetooth": "蓝牙",
+      "lighting": "灯光",
+      "system": "系统",
+      "other": "其他"
+    }
+  },
+  "hid": {
+    "tabs": {
+      "alpha": "字母",
+      "numbers": "数字",
+      "navigation": "导航",
+      "functions": "功能",
+      "symbols": "符号",
+      "media": "媒体",
+      "modkeys": "修饰键",
+      "other": "其他"
+    },
+    "general": {
+      "filter": "搜索...",
+      "noKeys": "未找到按键",
+      "modifiersTitle": "修饰键",
+      "implicitModifiers": "隐式修饰键"
+    }
+  },
+  "parameters": {
+    "composite": "某种组合？"
   },
   "unlock": {
     "title": "解锁以继续",

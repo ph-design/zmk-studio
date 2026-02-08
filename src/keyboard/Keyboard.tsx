@@ -31,6 +31,7 @@ import { LockStateContext } from "../rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { deserializeLayoutZoom, LayoutZoom } from "./PhysicalLayout";
 import { useLocalStorageState } from "../misc/useLocalStorageState";
+import { useTranslation } from "react-i18next";
 
 type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
 
@@ -165,6 +166,7 @@ export default function Keyboard() {
     selectedPhysicalLayoutIndex,
     setSelectedPhysicalLayoutIndex,
   ] = useLayouts();
+  const { t } = useTranslation();
   const [keymap, setKeymap] = useConnectedDeviceData<Keymap>(
     { keymap: { getKeymap: true } },
     (keymap) => {
@@ -548,7 +550,7 @@ export default function Keyboard() {
               setKeymapScale(value);
             }}
           >
-            <option value="auto">Auto</option>
+            <option value="auto">{t("keyboard.zoom.auto")}</option>
             <option value={0.25}>25%</option>
             <option value={0.5}>50%</option>
             <option value={0.75}>75%</option>
@@ -560,7 +562,7 @@ export default function Keyboard() {
         </div>
       )}
       {keymap && selectedBinding && (
-        <div className="p-2 col-start-2 row-start-2 bg-base-200">
+        <div className="p-4 col-start-2 row-start-2 bg-base-200 min-h-[14rem]">
           <BehaviorBindingPicker
             binding={selectedBinding}
             behaviors={Object.values(behaviors)}

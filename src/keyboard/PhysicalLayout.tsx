@@ -147,6 +147,9 @@ export const PhysicalLayout = ({
         width: rightMost * oneU + "px",
         transform: `scale(${scale})`,
         transformStyle: "preserve-3d",
+        transformOrigin: "center center",
+        transition: "transform 240ms ease",
+        willChange: "transform",
       }}
       ref={ref}
       {...props}
