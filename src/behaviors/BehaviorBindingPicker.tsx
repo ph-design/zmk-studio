@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import {
   GetBehaviorDetailsResponse,
@@ -91,11 +92,10 @@ const InlineParamPicker = ({
               <button
                 key={v.constant}
                 onClick={() => onValueChanged(v.constant)}
-                className={`${spanClass} h-[3.2rem] rounded text-sm font-medium cursor-pointer transition-colors flex items-center justify-center ${
-                  value === v.constant
-                    ? "bg-primary text-primary-content"
-                    : "bg-base-100 text-base-content hover:bg-base-300"
-                }`}
+                className={`${spanClass} h-[3.2rem] rounded text-sm font-medium cursor-pointer transition-colors flex items-center justify-center ${value === v.constant
+                  ? "bg-primary text-primary-content"
+                  : "bg-base-100 text-base-content hover:bg-base-300"
+                  }`}
               >
                 <span className="truncate px-1">{name}</span>
               </button>
@@ -117,11 +117,10 @@ const InlineParamPicker = ({
             <button
               key={id}
               onClick={() => onValueChanged(id)}
-              className={`px-4 py-1.5 rounded text-sm font-medium cursor-pointer transition-colors ${
-                value === id
-                  ? "bg-primary text-primary-content"
-                  : "bg-base-100 text-base-content hover:bg-base-300"
-              }`}
+              className={`px-4 py-1.5 rounded text-sm font-medium cursor-pointer transition-colors ${value === id
+                ? "bg-primary text-primary-content"
+                : "bg-base-100 text-base-content hover:bg-base-300"
+                }`}
             >
               {name}
             </button>
@@ -145,11 +144,10 @@ const InlineParamPicker = ({
             <button
               key={n}
               onClick={() => onValueChanged(n)}
-              className={`w-10 h-10 rounded text-sm font-medium cursor-pointer transition-colors flex items-center justify-center ${
-                value === n
-                  ? "bg-primary text-primary-content"
-                  : "bg-base-100 text-base-content hover:bg-base-300"
-              }`}
+              className={`w-10 h-10 rounded text-sm font-medium cursor-pointer transition-colors flex items-center justify-center ${value === n
+                ? "bg-primary text-primary-content"
+                : "bg-base-100 text-base-content hover:bg-base-300"
+                }`}
             >
               {n}
             </button>
@@ -168,6 +166,7 @@ export const BehaviorBindingPicker = ({
   behaviors,
   onBindingChanged,
 }: BehaviorBindingPickerProps) => {
+  const { t } = useTranslation();
   const [behaviorId, setBehaviorId] = useState(binding.behaviorId);
   const [param1, setParam1] = useState<number | undefined>(binding.param1);
   const [param2, setParam2] = useState<number | undefined>(binding.param2);
@@ -317,11 +316,10 @@ export const BehaviorBindingPicker = ({
           <button
             key={b.id}
             onClick={() => handleBehaviorSelect(b.id)}
-            className={`px-3 py-1.5 rounded text-sm text-left cursor-pointer transition-colors whitespace-nowrap ${
-              behaviorId === b.id
-                ? "bg-primary text-primary-content"
-                : "text-base-content hover:bg-base-300"
-            }`}
+            className={`px-3 py-1.5 rounded text-sm text-left cursor-pointer transition-colors whitespace-nowrap ${behaviorId === b.id
+              ? "bg-primary text-primary-content"
+              : "text-base-content hover:bg-base-300"
+              }`}
           >
             {b.displayName}
           </button>
@@ -353,7 +351,7 @@ export const BehaviorBindingPicker = ({
                   value={param1}
                   layers={layers}
                   onValueChanged={setParam1}
-                  label="Layer"
+                  label={t("binding.layer")}
                 />
               </div>
             )}
@@ -384,7 +382,7 @@ export const BehaviorBindingPicker = ({
           param2Values.length === 0 &&
           selectedBehavior && (
             <div className="flex items-center justify-center h-full text-base-content/40 text-sm">
-              {selectedBehavior.displayName} — No parameters
+              {selectedBehavior.displayName} — {t("binding.noParameters")}
             </div>
           )}
       </div>
@@ -401,18 +399,18 @@ const CategoryButton = ({
   isActive: boolean;
   onClick: () => void;
 }) => {
+  const { t } = useTranslation();
   const Icon = category.icon;
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-3 py-2 rounded text-sm cursor-pointer transition-colors text-left ${
-        isActive
-          ? "bg-primary text-primary-content"
-          : "text-base-content hover:bg-base-300"
-      }`}
+      className={`flex items-center gap-2 px-3 py-2 rounded text-sm cursor-pointer transition-colors text-left ${isActive
+        ? "bg-primary text-primary-content"
+        : "text-base-content hover:bg-base-300"
+        }`}
     >
       <Icon className="w-4 h-4 flex-shrink-0" />
-      <span>{category.label}</span>
+      <span>{t(`behavior.category.${category.id}`)}</span>
     </button>
   );
 };
@@ -437,6 +435,7 @@ const DualHidPicker = ({
   onParam1Changed: (value?: number) => void;
   onParam2Changed: (value?: number) => void;
 }) => {
+  const { t } = useTranslation();
   const [activeSlot, setActiveSlot] = useState<1 | 2>(1);
 
   const slot1Label = getHidLabel(param1);
@@ -458,13 +457,12 @@ const DualHidPicker = ({
       <div className="flex gap-2 items-center">
         <button
           onClick={() => setActiveSlot(1)}
-          className={`flex-1 flex flex-col items-center gap-0.5 px-3 py-2 rounded cursor-pointer transition-colors ${
-            activeSlot === 1
-              ? "ring-2 ring-primary bg-base-100"
-              : "bg-base-300 hover:bg-base-100"
-          }`}
+          className={`flex-1 flex flex-col items-center gap-0.5 px-3 py-2 rounded cursor-pointer transition-colors ${activeSlot === 1
+            ? "ring-2 ring-primary bg-base-100"
+            : "bg-base-300 hover:bg-base-100"
+            }`}
         >
-          <span className="text-sm text-base-content/50">Hold</span>
+          <span className="text-sm text-base-content/50">{t("binding.hold")}</span>
           <span className="text-base font-semibold text-base-content truncate max-w-full">
             {slot1Label}
           </span>
@@ -472,13 +470,12 @@ const DualHidPicker = ({
         <span className="text-base-content/30 text-lg">+</span>
         <button
           onClick={() => setActiveSlot(2)}
-          className={`flex-1 flex flex-col items-center gap-0.5 px-3 py-2.5 rounded cursor-pointer transition-colors ${
-            activeSlot === 2
-              ? "ring-2 ring-primary bg-base-100"
-              : "bg-base-300 hover:bg-base-100"
-          }`}
+          className={`flex-1 flex flex-col items-center gap-0.5 px-3 py-2.5 rounded cursor-pointer transition-colors ${activeSlot === 2
+            ? "ring-2 ring-primary bg-base-100"
+            : "bg-base-300 hover:bg-base-100"
+            }`}
         >
-          <span className="text-sm text-base-content/50">Tap</span>
+          <span className="text-sm text-base-content/50">{t("binding.tap")}</span>
           <span className="text-base font-semibold text-base-content truncate max-w-full">
             {slot2Label}
           </span>

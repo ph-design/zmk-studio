@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Checkbox, CheckboxGroup } from "react-aria-components";
+import { useTranslation } from "react-i18next";
 import {
   hid_usage_from_page_and_id,
   hid_usage_page_get_ids,
@@ -161,6 +162,7 @@ export const HidUsageGrid = ({
   usagePages,
   onValueChanged,
 }: HidUsageGridProps) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("alpha");
   const [filter, setFilter] = useState("");
   const gridRef = useRef<HTMLDivElement>(null);
@@ -305,20 +307,19 @@ export const HidUsageGrid = ({
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-3 py-1 rounded text-sm transition-colors cursor-pointer ${
-                  activeTab === tab.id
+                className={`px-3 py-1 rounded text-sm transition-colors cursor-pointer ${activeTab === tab.id
                     ? "bg-primary text-primary-content"
                     : "bg-base-300 text-base-content hover:bg-base-100"
-                }`}
+                  }`}
               >
-                {tab.label}
+                {t(`hid.tabs.${tab.id}`)}
               </button>
             ))}
           </div>
           <div className="relative ml-auto">
             <input
               type="text"
-              placeholder="Filter..."
+              placeholder={t("hid.general.filter")}
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               className="pl-7 pr-2 py-1 rounded bg-base-300 text-base-content text-sm w-32 focus:outline-none focus:ring-1 focus:ring-primary"
@@ -349,11 +350,10 @@ export const HidUsageGrid = ({
                 data-selected={isSelected ? "true" : undefined}
                 onClick={() => handleKeyClick(key.usageValue)}
                 title={key.label}
-                className={`${spanClass} h-[3.2rem] rounded text-sm font-medium cursor-pointer transition-colors flex items-center justify-center ${
-                  isSelected
+                className={`${spanClass} h-[3.2rem] rounded text-sm font-medium cursor-pointer transition-colors flex items-center justify-center ${isSelected
                     ? "bg-primary text-primary-content"
                     : "bg-base-100 text-base-content hover:bg-base-300"
-                }`}
+                  }`}
               >
                 <span className="truncate px-1 leading-tight text-center">{key.displayLabel}</span>
               </button>
@@ -361,7 +361,7 @@ export const HidUsageGrid = ({
           })}
           {filteredKeys.length === 0 && (
             <div className="col-span-full text-center text-base-content/50 py-4 text-sm">
-              No keys found
+              {t("hid.general.noKeys")}
             </div>
           )}
         </div>
@@ -369,10 +369,10 @@ export const HidUsageGrid = ({
 
       <div className="flex-shrink-0 w-40">
         <div className="text-sm text-base-content/60 mb-2 font-medium">
-          Modifiers
+          {t("hid.general.modifiersTitle")}
         </div>
         <CheckboxGroup
-          aria-label="Implicit Modifiers"
+          aria-label={t("hid.general.implicitModifiers")}
           className="grid grid-cols-2 gap-1.5"
           value={mods}
           onChange={modifiersChanged}

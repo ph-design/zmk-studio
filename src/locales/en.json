@@ -6,7 +6,9 @@
     "redo": "Redo",
     "language": "Language",
     "cancel": "Cancel",
-    "close": "Close"
+    "close": "Close",
+    "add": "Add",
+    "remove": "Remove"
   },
   "welcome": {
     "title": "Welcome to ZMK Studio",
@@ -33,7 +35,7 @@
     "studio": "Studio"
   },
   "footer": {
-    "copyright": "© 2024 - The ZMK Contributors",
+    "copyright": "© 2026 - The ZMK Contributors",
     "about": "About ZMK Studio",
     "license": "License NOTICE"
   },
@@ -41,7 +43,73 @@
     "project": "The ZMK Project:",
     "website": "website",
     "issues": "GitHub Issues",
-    "discord": "Discord Server"
+    "discord": "Discord Server",
+    "sponsorsDescription": "ZMK Studio is made possible thanks to the generous donation of time from our contributors, as well as the financial sponsorship from the following vendors:"
+  },
+  "sponsorLevels": {
+    "platinum": "Platinum",
+    "goldPlus": "Gold+",
+    "gold": "Gold",
+    "silver": "Silver",
+    "bronze": "Bronze",
+    "additional": "Additional"
+  },
+  "layer": {
+    "label": "Layers",
+    "newLayerName": "New Layer Name",
+    "addFailed": "Failed to add layer: {{error}}",
+    "removeFailed": "Failed to remove layer: {{error}}",
+    "restoreFailed": "Failed to restore layer: {{error}}",
+    "renameFailed": "Failed to change layer name: {{error}}"
+  },
+  "keyboard": {
+    "layout": "Layout",
+    "zoom": {
+      "auto": "Auto"
+    },
+    "errors": {
+      "setActiveLayout": "Failed to set the active physical layout",
+      "setBinding": "Failed to set binding",
+      "notConnected": "Not connected",
+      "noKeymap": "No keymap loaded"
+    }
+  },
+  "binding": {
+    "layer": "Layer",
+    "noParameters": "No parameters",
+    "hold": "Hold",
+    "tap": "Tap"
+  },
+  "behavior": {
+    "category": {
+      "basic": "Basic",
+      "layers": "Layers",
+      "modifiers": "Modifiers",
+      "bluetooth": "Bluetooth",
+      "system": "System",
+      "other": "Other"
+    }
+  },
+  "hid": {
+    "tabs": {
+      "alpha": "Alpha",
+      "numbers": "Numbers",
+      "navigation": "Navigation",
+      "functions": "Functions",
+      "symbols": "Symbols",
+      "media": "Media",
+      "modkeys": "Modifiers",
+      "other": "Other"
+    },
+    "general": {
+      "filter": "Filter...",
+      "noKeys": "No keys found",
+      "modifiersTitle": "Modifiers",
+      "implicitModifiers": "Implicit Modifiers"
+    }
+  },
+  "parameters": {
+    "composite": "Some composite?"
   },
   "unlock": {
     "title": "Unlock To Continue",

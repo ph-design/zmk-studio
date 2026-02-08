@@ -203,9 +203,7 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
       </div>
       <div>
         <p className="py-1 mr-2">
-          ZMK Studio is made possible thanks to the generous donation of time
-          from our contributors, as well as the financial sponsorship from the
-          following vendors:
+          {t("about.sponsorsDescription")}
         </p>
       </div>
       <div className="grid gap-2 auto-rows-auto grid-cols-[auto_minmax(min-content,1fr)] justify-items-center items-center">
@@ -216,13 +214,20 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
             [SponsorSize.Small]: "h-8",
           };
 
+          let levelLabel = s.level;
+          if (s.level === "Platinum") levelLabel = t("sponsorLevels.platinum");
+          else if (s.level === "Gold+") levelLabel = t("sponsorLevels.goldPlus");
+          else if (s.level === "Gold") levelLabel = t("sponsorLevels.gold");
+          else if (s.level === "Silver") levelLabel = t("sponsorLevels.silver");
+          else if (s.level === "Bronze") levelLabel = t("sponsorLevels.bronze");
+          else if (s.level === "Additional") levelLabel = t("sponsorLevels.additional");
+
           return (
             <React.Fragment key={s.level}>
-              <label>{s.level}</label>
+              <label>{levelLabel}</label>
               <div
-                className={`grid grid-rows-1 gap-x-1 auto-cols-fr grid-flow-col justify-items-center items-center ${
-                  heightVariants[s.size]
-                }`}
+                className={`grid grid-rows-1 gap-x-1 auto-cols-fr grid-flow-col justify-items-center items-center ${heightVariants[s.size]
+                  }`}
               >
                 {s.vendors.map((v) => {
                   const maxSizeVariants = {
