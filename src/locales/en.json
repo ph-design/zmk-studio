@@ -86,6 +86,7 @@
       "layers": "Layers",
       "modifiers": "Modifiers",
       "bluetooth": "Bluetooth",
+      "lighting": "Lighting",
       "system": "System",
       "other": "Other"
     }

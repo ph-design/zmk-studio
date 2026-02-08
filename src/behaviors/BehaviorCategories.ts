@@ -6,6 +6,7 @@ import {
   Bluetooth,
   Settings,
   MoreHorizontal,
+  Sun,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -65,6 +66,12 @@ export const BEHAVIOR_CATEGORIES: BehaviorCategory[] = [
       "Bootloader",
       "Studio Unlock",
     ],
+  },
+  {
+    id: "lighting",
+    label: "Lighting",
+    icon: Sun,
+    patterns: ["Underglow"],
   },
   {
     id: "other",
