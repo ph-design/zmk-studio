@@ -112,6 +112,12 @@ export const Keymap = ({
             </div>
           );
         }
+        if (behaviorName === "Momentary Layer" || behaviorName === "Toggle Layer" || behaviorName === "Sticky Layer" || behaviorName === "To Layer") {
+          const layerName = keymap.layers.find(l => l.id === binding.param1)?.name || `L${binding.param1}`;
+          return (
+            <span className="text-xs font-semibold text-center leading-tight">{layerName}</span>
+          );
+        }
         return (
           <HidUsageLabel
             hid_usage={binding.param1}
