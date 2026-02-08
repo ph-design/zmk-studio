@@ -339,13 +339,8 @@ export const BehaviorBindingPicker = ({
 
         {(param1IsHid !== param2IsHid) && (param1IsHid || param2IsHid) && hidUsagePages && (
           <>
-            <HidUsageGrid
-              value={param1IsHid ? param1 : param2}
-              usagePages={hidUsagePages}
-              onValueChanged={param1IsHid ? setParam1 : setParam2}
-            />
             {hasLayerId(param1Values) && (
-              <div className="mt-2">
+              <div className="mb-2">
                 <InlineParamPicker
                   values={param1Values}
                   value={param1}
@@ -355,6 +350,11 @@ export const BehaviorBindingPicker = ({
                 />
               </div>
             )}
+            <HidUsageGrid
+              value={param1IsHid ? param1 : param2}
+              usagePages={hidUsagePages}
+              onValueChanged={param1IsHid ? setParam1 : setParam2}
+            />
           </>
         )}
 
@@ -364,6 +364,7 @@ export const BehaviorBindingPicker = ({
             value={param1}
             layers={layers}
             onValueChanged={setParam1}
+            label={hasLayerId(param1Values) ? t("binding.layer") : undefined}
           />
         )}
 
@@ -374,6 +375,7 @@ export const BehaviorBindingPicker = ({
               value={param2}
               layers={layers}
               onValueChanged={setParam2}
+              label={hasLayerId(param2Values) ? t("binding.layer") : undefined}
             />
           </div>
         )}
