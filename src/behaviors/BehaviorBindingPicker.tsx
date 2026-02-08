@@ -382,7 +382,7 @@ export const BehaviorBindingPicker = ({
           param2Values.length === 0 &&
           selectedBehavior && (
             <div className="flex items-center justify-center h-full text-base-content/40 text-sm">
-              {selectedBehavior.displayName} — {t("binding.noParameters")}
+              {selectedBehavior.displayName} — {t("binding.noParametersRequired")}
             </div>
           )}
       </div>

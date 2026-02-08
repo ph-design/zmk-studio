@@ -76,7 +76,7 @@
   },
   "binding": {
     "layer": "Layer",
-    "noParameters": "No parameters",
+    "noParametersRequired": "No parameters required",
     "hold": "Hold",
     "tap": "Tap"
   },

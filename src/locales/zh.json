@@ -26,7 +26,7 @@
   "header": {
     "settings": "设置",
     "resetSettings": "重置设置",
-    "resetWarning": "重置将移除在 ZMK Studio 中的所有自定义并恢复出厂键位",
+    "resetWarning": "重置将移除在 ZMK Studio 中的所有设置并恢复出厂键位",
     "continue": "继续吗？",
     "restoreStock": "恢复出厂设置",
     "disconnect": "断开连接",
@@ -37,14 +37,14 @@
   "footer": {
     "copyright": "© 2026 - ZMK 贡献者",
     "about": "关于 ZMK Studio",
-    "license": "License NOTICE"
+    "license": "许可证声明"
   },
   "about": {
     "project": "ZMK 项目：",
-    "website": "网站",
-    "issues": "GitHub 问题",
-    "discord": "Discord 服务器",
-    "sponsorsDescription": "ZMK Studio 的诞生离不开贡献者们慷慨的时间捐赠，以及以下供应商的资金赞助："
+    "website": "访问网站",
+    "issues": "GitHub Issues",
+    "discord": "Discord 社区",
+    "sponsorsDescription": "ZMK Studio 的开发离不开众多贡献者的无私付出，以及以下赞助商的鼎力支持："
   },
   "sponsorLevels": {
     "platinum": "白金级",
@@ -76,7 +76,7 @@
   },
   "binding": {
     "layer": "层级",
-    "noParameters": "无参数",
+    "noParametersRequired": "无需参数",
     "hold": "长按",
     "tap": "点击"
   },
