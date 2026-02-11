@@ -195,11 +195,12 @@ function simpleDevicePicker(
     };
   }, [selectedTransport]);
 
-  let connections = transports.map((t) => (
+  let connections = transports.map((t, index) => (
     <li key={t.label} className="list-none">
       <button
         className="bg-base-300 hover:bg-primary hover:text-primary-content rounded px-2 py-1"
         type="button"
+        autoFocus={index === 0}
         onClick={async () => setSelectedTransport(t)}
       >
         {t.label}
