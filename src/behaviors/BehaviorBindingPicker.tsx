@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from "react";
-import { MdSearch, MdKeyboard, MdLayers, MdKeyboardCommandKey, MdBluetooth, MdLightbulbOutline, MdSettings, MdMoreHoriz } from "react-icons/md";
+import { MdSearch, MdKeyboard, MdLayers, MdKeyboardCommandKey, MdBluetooth, MdLightbulbOutline, MdSettings, MdMoreHoriz, MdInfoOutline } from "react-icons/md";
 import { Button } from "react-aria-components";
 import { useTranslation } from "react-i18next";
 import {
@@ -41,6 +41,8 @@ function getCategory(displayName: string): string {
   }
   return "other";
 }
+
+
 
 function validateBinding(
   metadata: BehaviorBindingParametersSet[],
@@ -182,8 +184,88 @@ export const BehaviorBindingPicker = ({
   const onParam2Changed = (v?: number) => updateBinding(behaviorId, param1, v);
   const onBehaviorChanged = (id: number) => updateBinding(id, 0, 0);
 
+  // Map behavior displayNames to their i18n description keys.
+  // This ensures reliable lookup even if displayName has special characters.
+  const DESCRIPTION_KEYS: Record<string, string> = {
+    "Key Press": "behaviorDescriptions.Key Press",
+    "Momentary Layer": "behaviorDescriptions.Momentary Layer",
+    "Toggle Layer": "behaviorDescriptions.Toggle Layer",
+    "To Layer": "behaviorDescriptions.To Layer",
+    "Mod-Tap": "behaviorDescriptions.Mod-Tap",
+    "Layer-Tap": "behaviorDescriptions.Layer-Tap",
+    "Sticky Key": "behaviorDescriptions.Sticky Key",
+    "Key Repeat": "behaviorDescriptions.Key Repeat",
+    "Bootloader": "behaviorDescriptions.Bootloader",
+    "Reset": "behaviorDescriptions.Reset",
+    "Studio Unlock": "behaviorDescriptions.Studio Unlock",
+    "Bluetooth": "behaviorDescriptions.Bluetooth",
+    "Output Selection": "behaviorDescriptions.Output Selection",
+    "RGB": "behaviorDescriptions.RGB",
+    "Backlight": "behaviorDescriptions.Backlight",
+    "Underglow": "behaviorDescriptions.Underglow",
+    "Caps Word": "behaviorDescriptions.Caps Word",
+    "None": "behaviorDescriptions.None",
+    "Transparent": "behaviorDescriptions.Transparent",
+  };
+
+  // Fallback descriptions (English) in case i18n returns the key itself
+  const FALLBACK_DESCRIPTIONS: Record<string, string> = {
+    "Key Press": "Send a standard key code",
+    "Momentary Layer": "Activate layer while held",
+    "Toggle Layer": "Switch layer on/off",
+    "To Layer": "Jump to layer",
+    "Mod-Tap": "Tap for key, hold for modifier",
+    "Layer-Tap": "Tap for key, hold for layer",
+    "Sticky Key": "Modifier stays active until next key",
+    "Key Repeat": "Repeats the last pressed key",
+    "Bootloader": "Enter bootloader mode for flashing",
+    "Reset": "Reboot the keyboard",
+    "Studio Unlock": "Unlock ZMK Studio access",
+    "Bluetooth": "Manage Bluetooth profiles",
+    "Output Selection": "Switch between USB and BLE",
+    "RGB": "Control RGB lighting",
+    "Backlight": "Control backlight brightness",
+    "Underglow": "Control underglow effects",
+    "Caps Word": "Caps Lock for one word only",
+    "None": "No action",
+    "Transparent": "Inherit behavior from lower layers",
+  };
+
+  const getDescription = (displayName: string): string | null => {
+    const key = DESCRIPTION_KEYS[displayName];
+    if (!key) return null;
+    const translated = t(key);
+    // If i18n returns the key itself (not found), use fallback
+    if (translated === key) return FALLBACK_DESCRIPTIONS[displayName] || null;
+    return translated || FALLBACK_DESCRIPTIONS[displayName] || null;
+  };
+
+  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
+
+  const showTooltip = (e: React.MouseEvent, text: string) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setTooltip({
+      text,
+      x: rect.left + rect.width / 2,
+      y: rect.top,
+    });
+  };
+
+  const hideTooltip = () => setTooltip(null);
+
   return (
     <div className="flex h-full w-full bg-base-100 font-sans">
+
+      {/* Fixed Tooltip — rendered outside scroll containers */}
+      {tooltip && (
+        <div
+          className="fixed z-[9999] pointer-events-none -translate-x-1/2 -translate-y-full px-3 py-2 bg-neutral text-neutral-content text-xs rounded-lg shadow-xl max-w-[200px] text-center leading-relaxed"
+          style={{ left: tooltip.x, top: tooltip.y - 6 }}
+        >
+          {tooltip.text}
+          <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-neutral" />
+        </div>
+      )}
 
       {/* 1. LEFT SIDEBAR: Navigation Rail (MD3 Navigation Drawer style) */}
       <div className="flex flex-col bg-base-200/50 p-4 gap-1 overflow-y-auto custom-scrollbar shrink-0 w-auto min-w-[220px]">
@@ -213,8 +295,8 @@ export const BehaviorBindingPicker = ({
       </div>
 
       {/* 2. MIDDLE COLUMN: Behavior List (MD3 List style) */}
-      <div className="flex flex-col bg-base-100 shrink-0 w-auto min-w-[240px] max-w-xs border-r border-base-content/5">
-        <div className="flex-1 overflow-y-auto px-4 py-4 custom-scrollbar">
+      <div className="flex flex-col bg-base-100 shrink-0 w-fit border-r border-base-content/5">
+        <div className="flex-1 overflow-y-auto px-2 py-4 custom-scrollbar">
           {filteredBehaviors.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-base-content/40 gap-3">
               <MdSearch size={24} className="opacity-20" />
@@ -224,20 +306,45 @@ export const BehaviorBindingPicker = ({
             <div className="flex flex-col gap-1">
               {filteredBehaviors.map((b) => {
                 const isSelected = b.id === behaviorId;
+                const description = getDescription(b.displayName);
+
                 return (
-                  <Button
+                  <div
                     key={b.id}
-                    onPress={() => onBehaviorChanged(b.id)}
                     className={`
-                                px-4 py-3 rounded-full text-left transition-all group relative overflow-hidden flex items-center gap-3 outline-none
-                                ${isSelected
-                        ? 'bg-primary/10 text-primary font-bold'
-                        : 'bg-transparent text-base-content/80 hover:bg-base-200/50 hover:text-base-content'
-                      }
-                            `}
+                      group flex items-center gap-1 pr-1 rounded-full transition-colors
+                      ${isSelected ? 'bg-primary/10' : 'hover:bg-base-200/50'}
+                    `}
                   >
-                    <span className="text-sm truncate flex-1">{b.displayName}</span>
-                  </Button>
+                    <Button
+                      onPress={() => onBehaviorChanged(b.id)}
+                      className={`
+                        flex-1 px-4 py-3 text-left outline-none truncate
+                        ${isSelected
+                          ? 'text-primary font-bold'
+                          : 'text-base-content/80 group-hover:text-base-content'
+                        }
+                      `}
+                    >
+                      <span className="text-sm truncate block">{b.displayName}</span>
+                    </Button>
+
+                    {description && (
+                      <div
+                        className={`
+                          p-1.5 rounded-full cursor-help transition-all duration-200 shrink-0
+                          ${isSelected
+                            ? 'opacity-100 text-primary/60'
+                            : 'opacity-0 group-hover:opacity-100 text-base-content/30 hover:text-base-content/70'
+                          }
+                        `}
+                        onMouseEnter={(e) => showTooltip(e, description)}
+                        onMouseLeave={hideTooltip}
+                      >
+                        <MdInfoOutline size={14} />
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -254,7 +361,9 @@ export const BehaviorBindingPicker = ({
             <div className="flex-1 relative flex flex-col">
               {metadata ? (
                 <div className="flex-1 w-full flex flex-col min-h-0">
-                  <div className="h-full flex flex-col">
+
+
+                  <div className="flex-1 flex flex-col">
                     <BehaviorParametersPicker
                       metadata={metadata}
                       param1={param1}

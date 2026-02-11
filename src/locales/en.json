@@ -114,6 +114,27 @@
     "confirmReset": "Are you sure?",
     "about": "About ZMK Studio"
   },
+  "behaviorDescriptions": {
+    "Key Press": "Send a standard key code",
+    "Momentary Layer": "Activate layer while held",
+    "Toggle Layer": "Switch layer on/off",
+    "To Layer": "Jump to layer",
+    "Mod-Tap": "Tap for key, hold for modifier",
+    "Layer-Tap": "Tap for key, hold for layer",
+    "Sticky Key": "Modifier stays active until next key",
+    "Key Repeat": "Repeats the last pressed key",
+    "Bootloader": "Enter bootloader mode for flashing",
+    "Reset": "Reboot the keyboard",
+    "Studio Unlock": "Unlock ZMK Studio access",
+    "Bluetooth": "Manage Bluetooth profiles",
+    "Output Selection": "Switch between USB and BLE",
+    "RGB": "Control RGB lighting",
+    "Backlight": "Control backlight brightness",
+    "Underglow": "Control underglow effects",
+    "Caps Word": "Caps Lock for one word only",
+    "None": "No action",
+    "Transparent": "Inherit behavior from lower layers"
+  },
   "status": {
     "locked": "Locked",
     "unlocked": "Unlocked",

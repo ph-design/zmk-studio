@@ -1,14 +1,53 @@
 {
-    "Key Press": {"short": ""},
-    "Bootloader": {"short": "Bootloadr"},
-    "External Power": {"short": "Ext Pwr"},
-    "Grave/Escape": {"short": "Grv/Esc"},
-    "Key Repeat": {"short": "Key Rept"},
-    "Key Toggle": {"short": "Key Togg"},
-    "Momentary Layer": {"short": "MLayer"},
-    "Output Selection": {"short": "OutputSel"},
-    "Sticky Key": {"short": "Stcky Key"},
-    "Studio Unlock": {"short": "Unlock"},
-    "Toggle Layer": {"short": "Togg Layr"},
-    "Transparent": {"short": "Transprnt"}
+    "Key Press": {
+        "short": ""
+    },
+    "None": {
+        "short": "None"
+    },
+    "Bootloader": {
+        "short": "Boot"
+    },
+    "External Power": {
+        "short": "Ext Pwr"
+    },
+    "Grave/Escape": {
+        "short": "Grv/Esc"
+    },
+    "Key Repeat": {
+        "short": "Key Rpt"
+    },
+    "Key Toggle": {
+        "short": "Key Tog"
+    },
+    "Momentary Layer": {
+        "short": "MO"
+    },
+    "Output Selection": {
+        "short": "Out"
+    },
+    "Sticky Key": {
+        "short": "SK"
+    },
+    "Studio Unlock": {
+        "short": "Unlock"
+    },
+    "Toggle Layer": {
+        "short": "TG"
+    },
+    "To Layer": {
+        "short": "TO"
+    },
+    "Transparent": {
+        "short": "Trans"
+    },
+    "Mod-Tap": {
+        "short": "MT"
+    },
+    "Layer-Tap": {
+        "short": "LT"
+    },
+    "Caps Word": {
+        "short": "Capsd"
+    }
 }

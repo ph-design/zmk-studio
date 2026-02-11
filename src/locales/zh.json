@@ -114,6 +114,27 @@
     "confirmReset": "确定要重置吗？",
     "about": "关于 ZMK Studio"
   },
+  "behaviorDescriptions": {
+    "Key Press": "发送标准按键代码",
+    "Momentary Layer": "按住时激活层级",
+    "Toggle Layer": "开启/关闭层级",
+    "To Layer": "跳转到指定层级",
+    "Mod-Tap": "短按发送按键，长按作为修饰键",
+    "Layer-Tap": "短按发送按键，长按作为层级切换",
+    "Sticky Key": "修饰键保持激活直到下一个按键",
+    "Key Repeat": "重复上一次按键",
+    "Bootloader": "进入 Bootloader 刷机模式",
+    "Reset": "重启键盘",
+    "Studio Unlock": "解锁 ZMK Studio 访问权限",
+    "Bluetooth": "管理蓝牙配置文件",
+    "Output Selection": "切换 USB 和蓝牙输出",
+    "RGB": "控制 RGB 灯效",
+    "Backlight": "控制背光亮度",
+    "Underglow": "控制底灯效果",
+    "Caps Word": "仅对下一个单词启用大写锁定",
+    "None": "无动作",
+    "Transparent": "继承下层定义的行为"
+  },
   "status": {
     "locked": "已锁定",
     "unlocked": "已解锁",
