@@ -22,6 +22,7 @@ import {
   list_devices as serial_list_devices,
 } from "./tauri/serial";
 import Keyboard from "./keyboard/Keyboard";
+import LightingPanel from "./lighting/LightingPanel";
 import { UndoRedoContext, useUndoRedo } from "./undoRedo";
 import { usePub, useSub } from "./usePubSub";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
@@ -31,6 +32,9 @@ import { valueAfter } from "./misc/async";
 import { AppFooter } from "./AppFooter";
 import { AboutModal } from "./AboutModal";
 import { LicenseNoticeModal } from "./misc/LicenseNoticeModal";
+import { Keyboard as KeyboardIcon, Sun } from "lucide-react";
+
+type AppPage = "keymap" | "lighting";
 
 declare global {
   interface Window {
@@ -171,6 +175,7 @@ function App() {
   const [doIt, undo, redo, canUndo, canRedo, reset] = useUndoRedo();
   const [showAbout, setShowAbout] = useState(false);
   const [showLicenseNotice, setShowLicenseNotice] = useState(false);
+  const [activePage, setActivePage] = useState<AppPage>("keymap");
   const [connectionAbort, setConnectionAbort] = useState(new AbortController());
 
   const [lockState, setLockState] = useState<LockState>(
@@ -299,7 +304,7 @@ function App() {
               open={showLicenseNotice}
               onClose={() => setShowLicenseNotice(false)}
             />
-            <div className="bg-base-100 text-base-content h-full max-h-[100vh] w-full max-w-[100vw] inline-grid grid-cols-[auto] grid-rows-[auto_1fr_auto] overflow-hidden">
+            <div className={`bg-base-100 text-base-content h-full max-h-[100vh] w-full max-w-[100vw] inline-grid grid-cols-[auto] ${conn.conn ? "grid-rows-[auto_auto_1fr_auto]" : "grid-rows-[auto_1fr_auto]"} overflow-hidden`}>
               <AppHeader
                 connectedDeviceLabel={connectedDeviceName}
                 canUndo={canUndo}
@@ -311,7 +316,33 @@ function App() {
                 onDisconnect={disconnect}
                 onResetSettings={resetSettings}
               />
-              <Keyboard />
+              {conn.conn && (
+                <nav className="flex bg-base-200 border-b border-base-300 px-4">
+                  <button
+                    onClick={() => setActivePage("keymap")}
+                    className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium cursor-pointer transition-colors border-b-2 ${
+                      activePage === "keymap"
+                        ? "text-primary border-primary"
+                        : "text-base-content/60 border-transparent hover:text-base-content"
+                    }`}
+                  >
+                    <KeyboardIcon className="w-4 h-4" />
+                    {t("nav.keymap")}
+                  </button>
+                  <button
+                    onClick={() => setActivePage("lighting")}
+                    className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium cursor-pointer transition-colors border-b-2 ${
+                      activePage === "lighting"
+                        ? "text-primary border-primary"
+                        : "text-base-content/60 border-transparent hover:text-base-content"
+                    }`}
+                  >
+                    <Sun className="w-4 h-4" />
+                    {t("nav.lighting")}
+                  </button>
+                </nav>
+              )}
+              {activePage === "keymap" ? <Keyboard /> : <LightingPanel />}
               <AppFooter
                 onShowAbout={() => setShowAbout(true)}
                 onShowLicenseNotice={() => setShowLicenseNotice(true)}

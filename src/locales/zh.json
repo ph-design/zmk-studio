@@ -128,5 +128,21 @@
     "failedToSave": "保存更改失败",
     "failedToDiscard": "放弃更改失败",
     "failedToReset": "重置设置失败"
+  },
+  "nav": {
+    "keymap": "键盘",
+    "lighting": "灯光"
+  },
+  "lighting": {
+    "connectFirst": "请连接并解锁设备以配置灯光",
+    "loading": "正在加载灯光状态…",
+    "on": "已开启",
+    "off": "已关闭",
+    "hue": "色相",
+    "saturation": "饱和度",
+    "brightness": "亮度",
+    "speed": "速度",
+    "save": "保存到键盘",
+    "saving": "保存中…"
   }
 }

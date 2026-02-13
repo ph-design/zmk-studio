@@ -128,5 +128,21 @@
     "failedToSave": "Failed to save changes",
     "failedToDiscard": "Failed to discard changes",
     "failedToReset": "Failed to reset settings"
+  },
+  "nav": {
+    "keymap": "Keymap",
+    "lighting": "Lighting"
+  },
+  "lighting": {
+    "connectFirst": "Connect and unlock a device to configure lighting",
+    "loading": "Loading lighting state…",
+    "on": "ON",
+    "off": "OFF",
+    "hue": "Hue",
+    "saturation": "Saturation",
+    "brightness": "Brightness",
+    "speed": "Speed",
+    "save": "Save to Keyboard",
+    "saving": "Saving…"
   }
 }
