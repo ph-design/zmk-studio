@@ -112,21 +112,17 @@ export const ModifierPicker = ({ value, onValueChanged, vertical = true }: Modif
 
             <div className={`flex-1 overflow-y-auto custom-scrollbar ${vertical ? 'p-1' : 'p-0 pt-2'}`}>
                 <CheckboxGroup
-                    className={`grid gap-2 ${vertical ? 'grid-cols-2' : 'grid-cols-4'}`}
+                    className={`grid gap-1.5 lg:gap-2 ${vertical ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-4'}`}
                     value={selectedMods}
                     onChange={modifiersChanged}
                     aria-label="Modifiers"
                 >
-                    {/* If vertical, we map differently to allow single select radio-like behavior? 
-                        CheckboxGroup allows multiple. For Mod-Tap usually 1 mod. 
-                        User can click to toggle.
-                    */}
                     {all_mods.map((m) => (
                         <Checkbox
                             key={m}
                             value={m.toLocaleString()}
                             className={({ isSelected }) => `
-                                flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold cursor-pointer transition-all outline-none w-full border
+                                flex items-center justify-between px-3 py-2.5 lg:py-3 rounded-xl text-xs font-bold cursor-pointer transition-all outline-none w-full border
                                 ${isSelected
                                     ? 'bg-primary/30 text-primary border-transparent'
                                     : 'bg-base-300/50 text-base-content/90 border-transparent hover:bg-base-300 hover:text-base-content'
@@ -136,8 +132,8 @@ export const ModifierPicker = ({ value, onValueChanged, vertical = true }: Modif
                             {({ isSelected }) => (
                                 <>
                                     <span className="truncate">{mod_labels[m]}</span>
-                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-all shrink-0 ${isSelected ? 'bg-primary text-primary-content scale-100' : 'bg-transparent scale-0'}`}>
-                                        <MdCheck size={14} />
+                                    <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-all shrink-0 ml-1 ${isSelected ? 'bg-primary text-primary-content scale-100' : 'bg-transparent scale-0'}`}>
+                                        <MdCheck size={12} />
                                     </div>
                                 </>
                             )}

@@ -6,7 +6,7 @@ import {
   hid_usage_get_labels,
   hid_usage_page_get_ids,
 } from "../hid-usages";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MdSearch } from "react-icons/md";
 import {
   mask_mods,
@@ -47,7 +47,7 @@ function getTabForUsage(page: number, id: number): string {
 }
 
 export const HidUsagePicker = ({
-  label,
+  // label kept in props interface for compatibility
   value,
   usagePages,
   onValueChanged,
@@ -92,7 +92,7 @@ export const HidUsagePicker = ({
         let name = labels.long || labels.med || labels.short || u.Name;
         let shortName = labels.short || u.Name;
 
-        // --- Name Cleanup Logic (Modified to apply to shortName as well) ---
+        // --- Name Cleanup Logic ---
         if (name.startsWith("Keyboard ")) name = name.replace(/^Keyboard /, "");
         if (shortName.startsWith("Keyboard ")) shortName = shortName.replace(/^Keyboard /, "");
 
@@ -125,17 +125,13 @@ export const HidUsagePicker = ({
 
   // Auto-select tab logic
   useEffect(() => {
-    // Only run if value is set and not zero/empty
     if (value !== undefined) {
       const cleanValue = mask_mods(value);
       const page = (cleanValue >> 16) & 0xFFFF;
       const id = cleanValue & 0xFFFF;
 
-      // Check if it's a valid usage (non-zero)
       if ((page << 16 | id) !== 0) {
         const tab = getTabForUsage(page, id);
-        // If we found a specific tab (even 'other'), switch to it.
-        // This ensures that when a user clicks a key with 'F1', it goes to Functions.
         if (tab) {
           setActiveTab(tab);
         }
@@ -145,48 +141,85 @@ export const HidUsagePicker = ({
 
   const handleUsageSelect = (page: number, id: number) => {
     let base = (page << 16) | id;
-    // Preserve existing mods from the current value
     let current_mods = value ? (value >> 24) : 0;
     onValueChanged(base | (current_mods << 24));
   };
 
-  return (
-    <div className="flex flex-col gap-4 h-full w-full font-sans">
-      {/* Top Bar: Tabs + Inline Search */}
-      <div className="flex items-center gap-4 shrink-0 px-2 py-3">
-        {/* Tabs - Sleek, pill shaped chips */}
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-1 items-center p-1">
-          {TABS.map(tab => (
-            <Button
-              key={tab.id}
-              onPress={() => setActiveTab(tab.id)}
-              className={`
-                                px-4 py-1.5 rounded-full text-xs font-bold transition-all border shrink-0 outline-none
-                                ${(!searchTerm && activeTab === tab.id)
-                  ? 'bg-primary text-primary-content border-transparent scale-105 shadow-sm'
-                  : 'bg-base-200/50 border-transparent text-base-content/60 hover:bg-base-200 hover:text-base-content'
-                }
-                            `}
-            >
-              {tab.label}
-            </Button>
-          ))}
-        </div>
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-        {/* Search Input - MD3 Search Bar */}
-        <div className="relative group w-48 shrink-0">
-          <MdSearch className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-base-content/40 group-focus-within:text-primary transition-colors" />
-          <Input
-            value={searchTerm}
-            onChange={(e) => onSearchTermChanged?.(e.target.value)}
-            placeholder={t("hid.filter")}
-            className="w-full bg-base-300/60 hover:bg-base-300 border border-base-content/10 focus:border-primary/40 rounded-full pl-10 pr-4 py-2 text-sm font-medium outline-none transition-all placeholder:text-base-content/40 focus:bg-base-100"
-          />
-        </div>
+  const openSearch = () => {
+    setSearchOpen(true);
+    // Focus the input after render
+    setTimeout(() => searchInputRef.current?.focus(), 50);
+  };
+
+  const closeSearch = () => {
+    setSearchOpen(false);
+    onSearchTermChanged?.("");
+  };
+
+  return (
+    <div className="flex flex-col h-full w-full font-sans">
+      {/* Top Bar: Tabs + Search toggle */}
+      <div className="shrink-0 px-4 pt-4 pb-3 flex items-center gap-2">
+        {searchOpen ? (
+          /* Expanded search — replaces tabs */
+          <div className="flex-1 flex items-center gap-2 animate-in fade-in duration-150">
+            <div className="relative flex-1">
+              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-base-content/40" />
+              <Input
+                ref={searchInputRef}
+                value={searchTerm}
+                onChange={(e) => onSearchTermChanged?.(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Escape') closeSearch(); }}
+                placeholder={t("hid.filter")}
+                className="w-full bg-base-200/60 hover:bg-base-200 border border-base-content/10 focus:border-primary/40 rounded-full pl-10 pr-4 py-1.5 text-sm font-medium outline-none transition-all placeholder:text-base-content/40 focus:bg-base-100"
+              />
+            </div>
+            <Button
+              onPress={closeSearch}
+              className="p-2 rounded-full text-base-content/50 hover:text-base-content hover:bg-base-content/5 transition-all outline-none shrink-0"
+            >
+              ✕
+            </Button>
+          </div>
+        ) : (
+          /* Tabs + Search icon button */
+          <>
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-1 items-center p-0.5">
+              {TABS.map(tab => (
+                <Button
+                  key={tab.id}
+                  onPress={() => setActiveTab(tab.id)}
+                  className={`
+                    px-4 py-1.5 rounded-full text-xs font-bold transition-all border shrink-0 outline-none
+                    ${(!searchTerm && activeTab === tab.id)
+                      ? 'bg-primary text-primary-content border-transparent scale-105 shadow-sm'
+                      : 'bg-base-200/50 border-transparent text-base-content/60 hover:bg-base-200 hover:text-base-content'
+                    }
+                  `}
+                >
+                  {tab.label}
+                </Button>
+              ))}
+            </div>
+            <Button
+              onPress={openSearch}
+              className="p-2 rounded-full text-base-content/40 hover:text-base-content hover:bg-base-content/5 transition-all outline-none shrink-0"
+              aria-label="Search"
+            >
+              <MdSearch size={20} />
+            </Button>
+          </>
+        )}
       </div>
 
-      {/* Grid Content - With padding to prevent hover clipping */}
-      <div className="flex-1 overflow-y-auto min-h-[240px] custom-scrollbar p-2">
+      {/* Separator */}
+      <div className="shrink-0 border-b border-base-content/5" />
+
+      {/* Grid Content - Responsive columns */}
+      <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar p-2">
         {displayUsages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-base-content/30 gap-3">
             <div className="w-16 h-16 rounded-full bg-base-200/50 flex items-center justify-center animate-pulse">
@@ -195,7 +228,10 @@ export const HidUsagePicker = ({
             <span className="text-sm font-medium">{t("behaviors.noResults")}</span>
           </div>
         ) : (
-          <div className={`grid gap-2 ${activeTab === 'media' || searchTerm ? 'grid-cols-2' : 'grid-cols-8 lg:grid-cols-10 xl:grid-cols-12'}`}>
+          <div className={`grid gap-1.5 lg:gap-2 ${activeTab === 'media' || searchTerm
+            ? 'grid-cols-1 sm:grid-cols-2'
+            : 'grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-8 xl:grid-cols-10'
+            }`}>
             {displayUsages.map(u => {
               const usageVal = (u.page << 16) | u.id;
               const isSelected = rawUsageValue === usageVal;
@@ -206,12 +242,12 @@ export const HidUsagePicker = ({
                     key={`${u.page}-${u.id}`}
                     onPress={() => handleUsageSelect(u.page, u.id)}
                     className={`
-                                            flex items-center justify-between px-4 py-3 rounded-2xl border text-left transition-all text-xs font-bold outline-none group
-                                            ${isSelected
+                      flex items-center justify-between px-3 lg:px-4 py-2.5 lg:py-3 rounded-2xl border text-left transition-all text-xs font-bold outline-none group
+                      ${isSelected
                         ? 'bg-primary/30 text-primary border-transparent shadow-none'
                         : 'bg-base-300/50 border-transparent hover:bg-base-300 hover:text-base-content'
                       }
-                                        `}
+                    `}
                   >
                     <span className={`truncate ${isSelected ? 'text-primary' : 'text-base-content/90'}`}>{u.name}</span>
                     {searchTerm && <span className={`text-[10px] font-mono ml-2 ${isSelected ? 'opacity-80' : 'opacity-40'}`}>{(u.page << 16 | u.id).toString(16)}</span>}
@@ -224,14 +260,14 @@ export const HidUsagePicker = ({
                   key={`${u.page}-${u.id}`}
                   onPress={() => handleUsageSelect(u.page, u.id)}
                   className={`
-                                        aspect-[1/1] flex flex-col items-center justify-center p-1 rounded-2xl border transition-all outline-none
-                                        ${isSelected
+                    aspect-[1/1] flex flex-col items-center justify-center p-0.5 lg:p-1 rounded-xl lg:rounded-2xl border transition-all outline-none
+                    ${isSelected
                       ? 'bg-primary/30 text-primary border-transparent shadow-none scale-105 z-10'
                       : 'bg-base-300/50 border-transparent hover:bg-base-300 hover:text-base-content hover:scale-105'
                     }
-                                    `}
+                  `}
                 >
-                  <span className={`text-xs font-bold text-center leading-tight break-words ${isSelected ? 'text-primary' : 'text-base-content/90'}`}>{u.shortName || u.name}</span>
+                  <span className={`text-[10px] lg:text-xs font-bold text-center leading-tight break-words ${isSelected ? 'text-primary' : 'text-base-content/90'}`}>{u.shortName || u.name}</span>
                 </Button>
               );
             })}
@@ -241,7 +277,7 @@ export const HidUsagePicker = ({
 
       {/* Internal Modifiers Footer (Optional - uses shared logic) */}
       {showModifiers && (
-        <div className="pt-4 border-t border-base-content/5 mt-auto">
+        <div className="pt-2 lg:pt-4 border-t border-base-content/5 mt-auto">
           <ModifierPicker value={value} onValueChanged={onValueChanged} vertical={false} />
         </div>
       )}

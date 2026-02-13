@@ -23,7 +23,8 @@ export const DevicePanel = ({
 
                 {/* Left: Icon + Name */}
                 <div className="flex items-center gap-4 min-w-0 flex-1">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    {/* Icon - hidden when space is tight */}
+                    <div className="w-10 h-10 rounded-full bg-primary/10 hidden xl:flex items-center justify-center shrink-0">
                         {transportLabel === "BLE" ? (
                             <MdBluetooth size={20} className="text-primary" />
                         ) : (

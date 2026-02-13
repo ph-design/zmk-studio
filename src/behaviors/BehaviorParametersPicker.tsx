@@ -118,14 +118,14 @@ export const BehaviorParametersPicker = ({
 
   if (isModTap) {
     return (
-      <div className="flex h-full w-full divide-x divide-base-content/5">
-        {/* Left Column: HOLD (Modifier) - Fixed width for consistent layout */}
-        <div className="w-64 flex flex-col min-w-0 bg-base-100/50">
-          <div className="shrink-0 px-4 py-3 border-b border-base-content/5 flex items-center gap-2 text-base-content/60">
+      <div className="flex flex-col md:flex-row h-full w-full md:divide-x divide-base-content/5">
+        {/* Left Column: HOLD (Modifier) */}
+        <div className="md:w-48 lg:w-64 shrink-0 flex flex-col min-w-0 bg-base-100/50 border-b md:border-b-0 border-base-content/5">
+          <div className="shrink-0 px-4 py-2 lg:py-3 border-b border-base-content/5 flex items-center gap-2 text-base-content/60">
             <MdSchedule size={18} />
             <span className="text-xs font-bold uppercase tracking-wider opacity-80">{t("behaviors.hold")}</span>
           </div>
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-2 max-h-[120px] md:max-h-none">
             <ModifierPicker
               value={param1}
               onValueChanged={onParam1Changed}
@@ -134,9 +134,9 @@ export const BehaviorParametersPicker = ({
           </div>
         </div>
 
-        {/* Right Column: TAP (Key) - Flexible to avoid label occlusion */}
+        {/* Right Column: TAP (Key) */}
         <div className="flex-1 flex flex-col min-w-0 bg-base-100">
-          <div className="shrink-0 px-4 py-3 border-b border-base-content/5 flex items-center gap-2 text-base-content/70">
+          <div className="shrink-0 px-4 py-2 lg:py-3 border-b border-base-content/5 flex items-center gap-2 text-base-content/70">
             <MdTouchApp size={18} />
             <span className="text-xs font-bold uppercase tracking-wider opacity-80">{t("behaviors.tap")}</span>
           </div>
@@ -146,7 +146,7 @@ export const BehaviorParametersPicker = ({
               value={param2}
               layers={layers}
               onValueChanged={onParam2Changed}
-              hideModifiers={true} // Hide internal modifiers picker since we are handling base key
+              hideModifiers={true}
               searchTerm={searchTerm}
               onSearchTermChanged={onSearchTermChanged}
             />

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, useContext } from "react";
 import { useTranslation } from "react-i18next";
-import { MdLock, MdUndo, MdRedo, MdSave, MdRefresh } from "react-icons/md";
+import { MdLock, MdUndo, MdRedo, MdSave, MdRefresh, MdMenu, MdArrowBack } from "react-icons/md";
 import { call_rpc } from "../rpc/logging";
 import { produce } from "immer";
 import { Keymap as KeymapComp } from "./Keymap";
@@ -36,6 +36,9 @@ export default function Keyboard() {
     // Loading states for actions
     const [isSaving, setIsSaving] = useState(false);
     const [isDiscarding, setIsDiscarding] = useState(false);
+
+    // Responsive sidebar state
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     useSub("rpc_notification.keymap.unsavedChangesStatusChanged", (status) =>
         setUnsaved(status)
@@ -330,8 +333,33 @@ export default function Keyboard() {
     return (
         <div className="flex w-full h-full bg-base-100 overflow-hidden text-base-content font-sans selection:bg-primary selection:text-primary-content">
 
-            {/* Sidebar Area - MD3 Surface Container Low (base-200) */}
-            <aside className="w-80 flex flex-col bg-base-200 relative z-30 border-r border-base-content/5">
+            {/* Mobile Sidebar Overlay */}
+            {sidebarOpen && (
+                <div
+                    className="fixed inset-0 bg-black/40 z-40 lg:hidden animate-in fade-in duration-200"
+                    onClick={() => setSidebarOpen(false)}
+                />
+            )}
+
+            {/* Sidebar Area - Responsive: overlay on mobile, fixed on large screens */}
+            <aside className={`
+                flex flex-col bg-base-200 border-r border-base-content/5
+                fixed lg:relative inset-y-0 left-0 z-50 lg:z-30
+                w-72 lg:w-72 xl:w-80 2xl:w-80
+                transform transition-transform duration-300 ease-out
+                ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+            `}>
+                {/* Mobile: Back button header - clearly distinct from device actions */}
+                <div className="lg:hidden px-4 pt-4 pb-1">
+                    <button
+                        onClick={() => setSidebarOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-full border border-base-content/15 bg-base-100/60 text-sm font-semibold text-base-content/60 hover:text-base-content hover:bg-base-100 transition-all group"
+                    >
+                        <MdArrowBack size={16} className="group-hover:-translate-x-0.5 transition-transform" />
+                        <span>{t("common.back", "Back")}</span>
+                    </button>
+                </div>
+
                 <DevicePanel
                     deviceName={deviceInfo?.name || "ZMK Keyboard"}
                     transportLabel="USB"
@@ -369,6 +397,61 @@ export default function Keyboard() {
                     )}
                 </div>
 
+                {/* Sidebar Action Bar: Undo/Redo + Save/Discard */}
+                <div className="px-4 py-2">
+                    <div className="flex items-center justify-between rounded-2xl bg-base-100/60 border border-base-content/10 p-1">
+                        {/* Undo / Redo */}
+                        <div className="flex items-center gap-0.5">
+                            <button
+                                title={t("common.undo")}
+                                onClick={undoRedo?.undo}
+                                disabled={!undoRedo?.canUndo}
+                                className="p-2 rounded-xl hover:bg-base-content/5 disabled:opacity-30 disabled:cursor-not-allowed text-base-content transition-all active:scale-90 flex items-center justify-center outline-none group"
+                            >
+                                <MdUndo size={18} className="group-active:-rotate-12 transition-transform" />
+                            </button>
+                            <button
+                                title={t("common.redo")}
+                                onClick={undoRedo?.redo}
+                                disabled={!undoRedo?.canRedo}
+                                className="p-2 rounded-xl hover:bg-base-content/5 disabled:opacity-30 disabled:cursor-not-allowed text-base-content transition-all active:scale-90 flex items-center justify-center outline-none group"
+                            >
+                                <MdRedo size={18} className="group-active:rotate-12 transition-transform" />
+                            </button>
+                        </div>
+
+                        {/* Save / Discard - appear when unsaved */}
+                        {unsaved ? (
+                            <div className="flex items-center gap-0.5 animate-in fade-in zoom-in-95 duration-200">
+                                <button
+                                    title={t("common.discard")}
+                                    onClick={handleDiscard}
+                                    disabled={isDiscarding || isSaving}
+                                    className="p-2 rounded-xl hover:bg-error/10 text-error disabled:opacity-50 transition-all active:scale-90 flex items-center justify-center outline-none group"
+                                >
+                                    <MdRefresh size={18} className={`transition-transform ${isDiscarding ? 'animate-spin' : 'group-hover:-rotate-90'}`} />
+                                </button>
+                                <button
+                                    title={t("common.save")}
+                                    onClick={handleSave}
+                                    disabled={isSaving || isDiscarding}
+                                    className="p-2 rounded-xl bg-primary text-primary-content shadow-sm hover:brightness-110 disabled:opacity-50 transition-all active:scale-90 flex items-center justify-center outline-none group"
+                                >
+                                    {isSaving ? (
+                                        <MdRefresh size={18} className="animate-spin" />
+                                    ) : (
+                                        <MdSave size={18} />
+                                    )}
+                                </button>
+                            </div>
+                        ) : (
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/25 pr-2 select-none">
+                                {t("status.saved", "Saved")}
+                            </span>
+                        )}
+                    </div>
+                </div>
+
                 <SystemPanel
                     unsaved={unsaved}
                     locked={lockState !== LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED}
@@ -379,62 +462,18 @@ export default function Keyboard() {
                 />
             </aside>
 
-            {/* Main Canvas Area - Modified for Permanent Bottom Drawer */}
-            <main className="flex-1 relative bg-base-100 overflow-hidden flex flex-col pb-[450px]">
-                {/* Toolbar */}
-                <div className="absolute top-4 left-4 z-20 flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
-
-                    {/* Undo/Redo Group */}
-                    <div className="flex items-center gap-1 bg-base-100/80 backdrop-blur-md rounded-2xl border border-base-content/20 shadow-sm p-1">
-                        <button
-                            title={t("common.undo")}
-                            onClick={undoRedo?.undo}
-                            disabled={!undoRedo?.canUndo}
-                            className="p-3 rounded-xl hover:bg-base-content/5 disabled:opacity-30 disabled:cursor-not-allowed text-base-content transition-all active:scale-90 flex items-center justify-center outline-none group"
-                        >
-                            <MdUndo size={20} className="group-active:-rotate-12 transition-transform" />
-                        </button>
-                        <div className="w-px h-4 bg-base-content/10 mx-0.5" />
-                        <button
-                            title={t("common.redo")}
-                            onClick={undoRedo?.redo}
-                            disabled={!undoRedo?.canRedo}
-                            className="p-3 rounded-xl hover:bg-base-content/5 disabled:opacity-30 disabled:cursor-not-allowed text-base-content transition-all active:scale-90 flex items-center justify-center outline-none group"
-                        >
-                            <MdRedo size={20} className="group-active:rotate-12 transition-transform" />
-                        </button>
-                    </div>
-
-                    {/* Unsaved Changes Group */}
-                    {unsaved && (
-                        <div className="flex items-center gap-1 bg-base-100/90 backdrop-blur-md rounded-2xl border border-base-content/10 shadow-lg p-1 animate-in zoom-in-95 slide-in-from-left-2 duration-300">
-                            <button
-                                title={t("common.discard")}
-                                onClick={handleDiscard}
-                                disabled={isDiscarding || isSaving}
-                                className="p-3 rounded-xl hover:bg-error/10 text-error disabled:opacity-50 transition-all active:scale-90 flex items-center justify-center outline-none group relative"
-                            >
-                                <MdRefresh size={20} className={`transition-transform ${isDiscarding ? 'animate-spin' : 'group-hover:-rotate-90'}`} />
-                            </button>
-                            <div className="w-px h-4 bg-base-content/10 mx-0.5" />
-                            <button
-                                title={t("common.save")}
-                                onClick={handleSave}
-                                disabled={isSaving || isDiscarding}
-                                className="p-3 rounded-xl bg-primary text-primary-content shadow-md hover:brightness-110 disabled:opacity-50 transition-all active:scale-90 flex items-center justify-center outline-none group relative"
-                            >
-                                {isSaving ? (
-                                    <MdRefresh size={20} className="animate-spin" />
-                                ) : (
-                                    <MdSave size={20} />
-                                )}
-                            </button>
-                        </div>
-                    )}
-                </div>
+            {/* Main Canvas Area - Responsive bottom padding for drawer */}
+            <main className="flex-1 relative bg-base-100 overflow-hidden flex flex-col pb-[240px] md:pb-[280px] lg:pb-[320px] xl:pb-[360px]">
+                {/* Mobile-only: Hamburger menu button */}
+                <button
+                    onClick={() => setSidebarOpen(true)}
+                    className="lg:hidden absolute top-3 left-4 z-20 p-2.5 rounded-xl bg-base-100/80 backdrop-blur-md border border-base-content/20 shadow-sm hover:bg-base-content/5 text-base-content transition-all active:scale-90 flex items-center justify-center outline-none animate-in fade-in duration-300"
+                >
+                    <MdMenu size={18} />
+                </button>
 
                 <div
-                    className="flex-1 relative flex items-center justify-center p-4 cursor-alias"
+                    className="flex-1 relative flex items-center justify-center p-2 cursor-alias"
                     onClick={() => setSelectedKeyPosition(undefined)}
                 >
                     {layouts && keymap && behaviors ? (
@@ -480,10 +519,11 @@ export default function Keyboard() {
                 </div>
             </main>
 
-            {/* Permanent Bottom Drawer */}
+            {/* Permanent Bottom Drawer - Responsive height handled by BehaviorDrawer */}
             <BehaviorDrawer
                 isOpen={true} // Always Open
                 onClose={() => { }} // No closing
+                sidebarOpen={sidebarOpen}
                 title={selectedKeyPosition !== undefined ? t("behaviors.editBinding") : t("behaviors.configuration")}
                 hideHeader={true}
             >
