@@ -21,7 +21,12 @@
     "unsupportedOptions": "要使用 ZMK Studio，请执行以下操作之一:",
     "chromeBrowser": "使用支持上述网络技术的浏览器，例如 Chrome/Edge，或",
     "downloadAppPrefix": "下载我们的",
-    "crossPlatformApp": "跨平台应用程序"
+    "crossPlatformApp": "跨平台应用程序",
+    "subtitle": "轻松自定义您的键盘布局、行为和设置。",
+    "connectVia": "通过 {{type}} 连接",
+    "connect": "连接设备",
+    "noDevices": "未发现设备",
+    "tryRefresh": "请尝试刷新或检查连接"
   },
   "header": {
     "settings": "设置",

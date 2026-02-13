@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { RpcTransport } from "@zmkfirmware/zmk-studio-ts-client/transport/index";
 import { UserCancelledError } from "@zmkfirmware/zmk-studio-ts-client/transport/errors";
 import type { AvailableDevice } from "./tauri/index";
-import { MdBluetooth, MdRefresh, MdLanguage, MdClose } from "react-icons/md";
+import { MdBluetooth, MdRefresh, MdClose, MdUsb, MdDevices } from "react-icons/md";
 import {
   Key,
   ListBox,
@@ -33,11 +33,15 @@ export interface ConnectModalProps {
   onClose?: () => void;
 }
 
-function deviceList(
-  open: boolean,
-  transports: TransportFactory[],
-  onTransportCreated: (t: RpcTransport) => void
-) {
+function DeviceListPicker({
+  open,
+  transports,
+  onTransportCreated,
+}: {
+  open: boolean;
+  transports: TransportFactory[];
+  onTransportCreated: (t: RpcTransport) => void;
+}) {
   const { t } = useTranslation();
   const [devices, setDevices] = useState<
     Array<[TransportFactory, AvailableDevice]>
@@ -96,49 +100,87 @@ function deviceList(
   );
 
   return (
-    <div>
-      <div className="grid grid-cols-[1fr_auto]">
-        <label>{t("welcome.selectDevice")}</label>
-        <button
-          className="p-1 rounded hover:bg-base-300 disabled:bg-base-100 disabled:opacity-75"
-          disabled={refreshing}
-          onClick={onRefresh}
+    <div className="flex flex-col gap-4">
+      {/* Header row: label + refresh */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-base-content/70">
+          {t("welcome.selectDevice")}
+        </span>
+        <Button
+          className="p-2 rounded-xl hover:bg-base-content/5 text-base-content/50 hover:text-base-content transition-all outline-none disabled:opacity-40"
+          isDisabled={refreshing}
+          onPress={onRefresh}
         >
           <MdRefresh
-            className={`size-5 transition-transform ${refreshing ? "animate-spin" : ""
-              }`}
+            className={`size-5 transition-transform ${refreshing ? "animate-spin" : ""}`}
           />
-        </button>
+        </Button>
       </div>
-      <ListBox
-        aria-label="Device"
-        items={devices}
-        onSelectionChange={onSelect}
-        selectionMode="single"
-        selectedKeys={selectedDev}
-        className="flex flex-col gap-1 pt-1"
-      >
-        {([t, d]) => (
-          <ListBoxItem
-            className="grid grid-cols-[1em_1fr] rounded hover:bg-base-300 cursor-pointer px-1"
-            id={d.id}
-            aria-label={d.label}
-          >
-            {t.isWireless && (
-              <MdBluetooth className="w-4 justify-center content-center h-full" />
-            )}
-            <span className="col-start-2">{d.label}</span>
-          </ListBoxItem>
-        )}
-      </ListBox>
+
+      {/* Device list */}
+      {refreshing && devices.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-10 gap-3 text-base-content/30">
+          <div className="w-10 h-10 rounded-full bg-base-200/50 flex items-center justify-center animate-pulse">
+            <MdDevices size={20} />
+          </div>
+          <span className="text-xs font-medium">{t("common.loading", "Scanning...")}</span>
+        </div>
+      ) : devices.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-10 gap-3 text-base-content/30">
+          <div className="w-10 h-10 rounded-full bg-base-200/50 flex items-center justify-center">
+            <MdDevices size={20} />
+          </div>
+          <span className="text-xs font-medium">{t("welcome.noDevices", "No devices found")}</span>
+          <span className="text-[11px] text-base-content/20">{t("welcome.tryRefresh", "Try refreshing or check your connection")}</span>
+        </div>
+      ) : (
+        <ListBox
+          aria-label="Device"
+          items={devices}
+          onSelectionChange={onSelect}
+          selectionMode="single"
+          selectedKeys={selectedDev}
+          className="flex flex-col gap-1.5"
+        >
+          {([t, d]) => (
+            <ListBoxItem
+              className={({ isSelected, isFocused }) => `
+                flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer outline-none transition-all
+                ${isSelected
+                  ? 'bg-primary/10 text-primary font-bold ring-1 ring-primary/20'
+                  : isFocused
+                    ? 'bg-base-content/5 text-base-content'
+                    : 'hover:bg-base-content/5 text-base-content/80'
+                }
+              `}
+              id={d.id}
+              aria-label={d.label}
+            >
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${t.isWireless ? 'bg-blue-500/10 text-blue-500' : 'bg-emerald-500/10 text-emerald-500'
+                }`}>
+                {t.isWireless ? <MdBluetooth size={18} /> : <MdUsb size={18} />}
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm font-medium truncate">{d.label}</span>
+                <span className="text-[10px] text-base-content/40 font-medium uppercase tracking-wider">
+                  {t.isWireless ? 'Bluetooth' : 'USB'}
+                </span>
+              </div>
+            </ListBoxItem>
+          )}
+        </ListBox>
+      )}
     </div>
   );
 }
 
-function simpleDevicePicker(
-  transports: TransportFactory[],
-  onTransportCreated: (t: RpcTransport) => void
-) {
+function SimpleDevicePicker({
+  transports,
+  onTransportCreated,
+}: {
+  transports: TransportFactory[];
+  onTransportCreated: (t: RpcTransport) => void;
+}) {
   const { t } = useTranslation();
   const [availableDevices, setAvailableDevices] = useState<
     AvailableDevice[] | undefined
@@ -195,27 +237,29 @@ function simpleDevicePicker(
     };
   }, [selectedTransport]);
 
-  let connections = transports.map((t) => (
-    <li key={t.label} className="list-none">
-      <button
-        className="bg-base-300 hover:bg-primary hover:text-primary-content rounded px-2 py-1"
-        type="button"
-        onClick={async () => setSelectedTransport(t)}
-      >
-        {t.label}
-      </button>
-    </li>
-  ));
   return (
-    <div>
-      <p className="text-sm">{t("welcome.selectConnection")}</p>
-      <ul className="flex gap-2 pt-2">{connections}</ul>
+    <div className="flex flex-col gap-4">
+      <span className="text-sm font-medium text-base-content/70">
+        {t("welcome.selectConnection")}
+      </span>
+      <div className="flex gap-3">
+        {transports.map((tp) => (
+          <Button
+            key={tp.label}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-base-content/5 hover:bg-primary/10 hover:text-primary text-base-content/70 text-sm font-bold transition-all outline-none"
+            onPress={() => setSelectedTransport(tp)}
+          >
+            {tp.isWireless || tp.label === "BLE" ? <MdBluetooth size={18} /> : <MdUsb size={18} />}
+            {tp.label}
+          </Button>
+        ))}
+      </div>
       {selectedTransport && availableDevices && (
-        <ul>
+        <div className="flex flex-col gap-1.5">
           {availableDevices.map((d) => (
-            <li
+            <button
               key={d.id}
-              className="m-1 p-1"
+              className="w-full text-left px-4 py-3 rounded-2xl hover:bg-base-content/5 text-sm transition-all"
               onClick={async () => {
                 onTransportCreated(
                   await selectedTransport!.pick_and_connect!.connect(d)
@@ -224,18 +268,18 @@ function simpleDevicePicker(
               }}
             >
               {d.label}
-            </li>
+            </button>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
 }
 
-function noTransportsOptionsPrompt() {
+function NoTransportsPrompt() {
   const { t } = useTranslation();
   return (
-    <div className="m-4 flex flex-col gap-2">
+    <div className="flex flex-col gap-4 text-sm text-base-content/70">
       <p>
         {t("welcome.unsupportedPrefix")} {" "}
         <ExternalLink href="https://caniuse.com/web-serial">Web Serial</ExternalLink> {" "}
@@ -243,17 +287,13 @@ function noTransportsOptionsPrompt() {
         <ExternalLink href="https://caniuse.com/web-bluetooth">Web Bluetooth</ExternalLink> {" "}
         {t("welcome.unsupportedSuffix")}
       </p>
-
       <div>
-        <p>{t("welcome.unsupportedOptions")}</p>
-        <ul className="list-disc list-inside">
-          <li>
-            {t("welcome.chromeBrowser")}
-          </li>
+        <p className="font-medium text-base-content/80 mb-2">{t("welcome.unsupportedOptions")}</p>
+        <ul className="list-disc list-inside space-y-1 text-base-content/60">
+          <li>{t("welcome.chromeBrowser")}</li>
           <li>
             {t("welcome.downloadAppPrefix")} {" "}
-            <ExternalLink href="/download">{t("welcome.crossPlatformApp")}</ExternalLink>
-            .
+            <ExternalLink href="/download">{t("welcome.crossPlatformApp")}</ExternalLink>.
           </li>
         </ul>
       </div>
@@ -261,19 +301,32 @@ function noTransportsOptionsPrompt() {
   );
 }
 
-function connectOptions(
-  transports: TransportFactory[],
-  onTransportCreated: (t: RpcTransport) => void,
-  open?: boolean
-) {
+function ConnectContent({
+  transports,
+  onTransportCreated,
+  open,
+}: {
+  transports: TransportFactory[];
+  onTransportCreated: (t: RpcTransport) => void;
+  open?: boolean;
+}) {
   const useSimplePicker = useMemo(
     () => transports.every((t) => !t.pick_and_connect),
     [transports]
   );
 
-  return useSimplePicker
-    ? simpleDevicePicker(transports, onTransportCreated)
-    : deviceList(open || false, transports, onTransportCreated);
+  return useSimplePicker ? (
+    <SimpleDevicePicker
+      transports={transports}
+      onTransportCreated={onTransportCreated}
+    />
+  ) : (
+    <DeviceListPicker
+      open={open || false}
+      transports={transports}
+      onTransportCreated={onTransportCreated}
+    />
+  );
 }
 
 export const ConnectModal = ({
@@ -282,76 +335,53 @@ export const ConnectModal = ({
   onTransportCreated,
   onClose,
 }: ConnectModalProps) => {
-  const { t, i18n } = useTranslation();
-  // Allow closing via Esc to notify parent, although useModalRef handles the DOM dialog close.
-  // We use useModalRef's closeOnEscape=true only if we have onClose, to avoid closing the persistent modal.
+  const { t } = useTranslation();
   const dialog = useModalRef(open || false, !!onClose, !!onClose);
-  const [langOpen, setLangOpen] = useState(false);
-  const langRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const handleClick = (event: MouseEvent) => {
-      if (langRef.current && !langRef.current.contains(event.target as Node)) {
-        setLangOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
 
   const haveTransports = useMemo(() => transports.length > 0, [transports]);
 
   return (
-    <GenericModal ref={dialog} className="max-w-xl" onClose={onClose}>
-      <div className="flex items-center justify-between gap-4 mb-4">
-        <h1 className="text-xl font-bold">
-          {t("welcome.title")}
-        </h1>
-        <div className="flex items-center gap-2">
-          <div className="relative" ref={langRef}>
-            <Button
-              className="p-2 rounded-full hover:bg-base-300 transition-colors"
-              onPress={() => setLangOpen((open) => !open)}
-            >
-              <MdLanguage className="w-5 h-5" />
-            </Button>
-            {langOpen && (
-              <div className="absolute right-0 mt-2 shadow-xl rounded-xl border border-base-200 bg-base-100/90 backdrop-blur-md overflow-hidden z-50 min-w-[120px] py-1">
-                <button
-                  className="w-full text-left px-4 py-2 hover:bg-primary/10 hover:text-primary text-sm transition-colors"
-                  onClick={() => {
-                    i18n.changeLanguage("en");
-                    setLangOpen(false);
-                  }}
-                >
-                  English
-                </button>
-                <button
-                  className="w-full text-left px-4 py-2 hover:bg-primary/10 hover:text-primary text-sm transition-colors"
-                  onClick={() => {
-                    i18n.changeLanguage("zh");
-                    setLangOpen(false);
-                  }}
-                >
-                  中文
-                </button>
-              </div>
-            )}
+    <GenericModal ref={dialog} className="max-w-md w-full" onClose={onClose}>
+      <div className="p-6 flex flex-col gap-5">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+              <MdDevices size={22} />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-base-content leading-tight">
+                {t("welcome.title")}
+              </h1>
+              <span className="text-[11px] text-base-content/40 font-medium">
+                ZMK Studio
+              </span>
+            </div>
           </div>
-
           {onClose && (
             <Button
-              className="p-2 rounded-full hover:bg-base-300 transition-colors text-base-content/70 hover:text-red-500"
+              className="p-2 rounded-xl hover:bg-base-content/5 text-base-content/40 hover:text-base-content transition-all outline-none"
               onPress={onClose}
             >
-              <MdClose className="w-5 h-5" />
+              <MdClose size={20} />
             </Button>
           )}
         </div>
+
+        {/* Separator */}
+        <div className="border-b border-base-content/5" />
+
+        {/* Content */}
+        {haveTransports ? (
+          <ConnectContent
+            transports={transports}
+            onTransportCreated={onTransportCreated}
+            open={open}
+          />
+        ) : (
+          <NoTransportsPrompt />
+        )}
       </div>
-      {haveTransports
-        ? connectOptions(transports, onTransportCreated, open)
-        : noTransportsOptionsPrompt()}
     </GenericModal>
   );
 };

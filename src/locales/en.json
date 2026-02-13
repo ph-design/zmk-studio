@@ -21,7 +21,12 @@
     "unsupportedOptions": "To use ZMK Studio, either:",
     "chromeBrowser": "Use a browser that supports the above web technologies, e.g. Chrome/Edge, or",
     "downloadAppPrefix": "Download our",
-    "crossPlatformApp": "cross platform application"
+    "crossPlatformApp": "cross platform application",
+    "subtitle": "Customize your keyboard layout, behaviors, and settings with ease.",
+    "connectVia": "Connect via {{type}}",
+    "connect": "Connect Device",
+    "noDevices": "No devices found",
+    "tryRefresh": "Try refreshing or check your connection"
   },
   "header": {
     "settings": "Settings",
