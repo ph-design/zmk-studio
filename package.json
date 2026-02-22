@@ -20,7 +20,7 @@
     "@tailwindcss/container-queries": "^0.1.1",
     "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/plugin-cli": "^2.0.0",
-    "@zmkfirmware/zmk-studio-ts-client": "^0.0.18",
+    "@zmkfirmware/zmk-studio-ts-client": "npm:@ph-design/zmk-studio-ts-client-fork@0.0.18-dev.20260223090613.5764553",
     "emittery": "^1.0.3",
     "i18next": "^25.7.4",
     "immer": "^10.1.1",

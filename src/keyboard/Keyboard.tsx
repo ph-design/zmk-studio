@@ -32,6 +32,8 @@ import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { deserializeLayoutZoom, LayoutZoom } from "./PhysicalLayout";
 import { useLocalStorageState } from "../misc/useLocalStorageState";
 import { useTranslation } from "react-i18next";
+import IdlePanel from "./IdlePanel";
+import LightingControl from "../lighting/LightingControl";
 
 type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
 
@@ -184,6 +186,7 @@ export default function Keyboard() {
   const [selectedKeyPosition, setSelectedKeyPosition] = useState<
     number | undefined
   >(undefined);
+  const [bottomTab, setBottomTab] = useState<"keymap" | "lighting">("keymap");
   const behaviors = useBehaviors();
 
   const conn = useContext(ConnectionContext);
@@ -561,17 +564,49 @@ export default function Keyboard() {
           </select>
         </div>
       )}
-      {keymap && selectedBinding && (
-        <div className="p-4 col-start-2 row-start-2 bg-base-200 min-h-[14rem]">
-          <BehaviorBindingPicker
-            binding={selectedBinding}
-            behaviors={Object.values(behaviors)}
-            layers={keymap.layers.map(({ id, name }, li) => ({
-              id,
-              name: name || li.toLocaleString(),
-            }))}
-            onBindingChanged={doUpdateBinding}
-          />
+      {layouts && keymap && (
+        <div className="col-start-2 row-start-2 bg-base-200 min-h-[14rem] flex flex-col">
+          <div className="flex shrink-0">
+            <button
+              className={`px-4 py-1.5 text-sm font-medium transition-colors ${
+                bottomTab === "keymap"
+                  ? "text-primary border-b-2 border-primary"
+                  : "text-base-content/50 hover:text-base-content/70"
+              }`}
+              onClick={() => setBottomTab("keymap")}
+            >
+              {t("keyboard.tab.keymap")}
+            </button>
+            <button
+              className={`px-4 py-1.5 text-sm font-medium transition-colors ${
+                bottomTab === "lighting"
+                  ? "text-primary border-b-2 border-primary"
+                  : "text-base-content/50 hover:text-base-content/70"
+              }`}
+              onClick={() => setBottomTab("lighting")}
+            >
+              {t("keyboard.tab.lighting")}
+            </button>
+          </div>
+          <div className="p-4 flex-1 min-h-0">
+            {bottomTab === "keymap" ? (
+              selectedBinding ? (
+                <BehaviorBindingPicker
+                  binding={selectedBinding}
+                  behaviors={Object.values(behaviors)}
+                  layers={keymap.layers.map(({ id, name }, li) => ({
+                    id,
+                    name: name || li.toLocaleString(),
+                  }))}
+                  onBindingChanged={doUpdateBinding}
+                />
+              ) : (
+                <IdlePanel />
+              )
+            ) : (
+              <LightingControl />
+            )}
+          </div>
         </div>
       )}
     </div>
