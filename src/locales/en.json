@@ -64,6 +64,10 @@
   },
   "keyboard": {
     "layout": "Layout",
+    "tab": {
+      "keymap": "Keymap",
+      "lighting": "Lighting"
+    },
     "zoom": {
       "auto": "Auto"
     },
@@ -79,6 +83,23 @@
     "noParametersRequired": "No parameters required",
     "hold": "Hold",
     "tap": "Tap"
+  },
+  "lighting": {
+    "title": "Lighting",
+    "rgbUnderglow": "RGB Underglow",
+    "backlight": "Backlight",
+    "hue": "Hue",
+    "sat": "Sat",
+    "brt": "Brt",
+    "effect": "Effect",
+    "speed": "Speed",
+    "color": "Color",
+    "notSupported": "Lighting Control Not Available",
+    "notSupportedDesc": "Lighting control is not an official ZMK feature. To use it, you need to build your firmware based on our custom branch and add the RGB-related devicetree overlay configuration.",
+    "turnOnHint": "Turn on a light source to adjust settings",
+    "noEffects": "No effects available",
+    "on": "ON",
+    "off": "OFF"
   },
   "behavior": {
     "category": {
@@ -128,5 +149,8 @@
     "failedToSave": "Failed to save changes",
     "failedToDiscard": "Failed to discard changes",
     "failedToReset": "Failed to reset settings"
+  },
+  "idle": {
+    "hint": "Click a key above to start editing"
   }
 }

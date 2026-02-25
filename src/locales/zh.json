@@ -64,6 +64,10 @@
   },
   "keyboard": {
     "layout": "布局",
+    "tab": {
+      "keymap": "键位",
+      "lighting": "灯光"
+    },
     "zoom": {
       "auto": "自动"
     },
@@ -79,6 +83,23 @@
     "noParametersRequired": "无需参数",
     "hold": "长按",
     "tap": "点击"
+  },
+  "lighting": {
+    "title": "灯光",
+    "rgbUnderglow": "RGB 底灯",
+    "backlight": "背光",
+    "hue": "色相",
+    "sat": "饱和",
+    "brt": "亮度",
+    "effect": "效果",
+    "speed": "速度",
+    "color": "颜色",
+    "notSupported": "灯光控制不可用",
+    "notSupportedDesc": "灯光控制并非 ZMK 官方功能。如需使用，请基于我们的自定义分支构建固件，并编写 RGB 相关的 devicetree (DT) 配置。",
+    "turnOnHint": "开启灯光后可调整参数",
+    "noEffects": "无可用灯效",
+    "on": "开",
+    "off": "关"
   },
   "behavior": {
     "category": {
@@ -128,5 +149,8 @@
     "failedToSave": "保存更改失败",
     "failedToDiscard": "放弃更改失败",
     "failedToReset": "重置设置失败"
+  },
+  "idle": {
+    "hint": "点击上方的按键开始编辑"
   }
 }
