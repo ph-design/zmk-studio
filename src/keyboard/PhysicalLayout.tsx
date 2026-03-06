@@ -132,6 +132,7 @@ export const PhysicalLayout = ({
       >
         <Key
           oneU={oneU}
+          hoverZoom={props.hoverZoom}
           selected={idx === selectedPosition}
           {...p}
         />
