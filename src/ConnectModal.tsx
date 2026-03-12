@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { RpcTransport } from "@zmkfirmware/zmk-studio-ts-client/transport/index";
 import { UserCancelledError } from "@zmkfirmware/zmk-studio-ts-client/transport/errors";
 import type { AvailableDevice } from "./tauri/index";
-import { Bluetooth, RefreshCw, Languages } from "lucide-react";
+import { Bluetooth, Usb, RefreshCw, Languages } from "lucide-react";
 import {
   Key,
   ListBox,
@@ -124,8 +124,10 @@ function deviceList(
             id={d.id}
             aria-label={d.label}
           >
-            {t.isWireless && (
+            {t.isWireless ? (
               <Bluetooth className="w-4 justify-center content-center h-full" />
+            ) : (
+              <Usb className="w-4 justify-center content-center h-full" />
             )}
             <span className="col-start-2">{d.label}</span>
           </ListBoxItem>

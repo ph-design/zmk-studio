@@ -75,9 +75,15 @@ pub async fn serial_list_devices(app_handle: AppHandle) -> Result<Vec<super::com
         .into_iter()
         .filter_map(|pi| {
             if let SerialPortType::UsbPort(u) = pi.port_type {
+                let label = match (&u.manufacturer, &u.product) {
+                    (Some(mfr), Some(prod)) => format!("{} {} ({})", mfr, prod, pi.port_name),
+                    (None, Some(prod)) => format!("{} ({})", prod, pi.port_name),
+                    (Some(mfr), None) => format!("{} ({})", mfr, pi.port_name),
+                    (None, None) => format!("USB Device ({})", pi.port_name),
+                };
                 Some(super::commands::AvailableDevice {
                     id: pi.port_name,
-                    label: u.product.unwrap_or("Unnamed device".to_string()),
+                    label,
                 })
             } else {
                 None
