@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faAndroid,
@@ -80,7 +81,7 @@ const PlatformLinks: Record<Platform, DownloadLink[]> = {
 };
 
 const ReleaseAssets = releaseData.assets.map((asset: any) => asset.browser_download_url);
-const ReleaseVersion = releaseData.tag_name;
+const ReleaseVersion = "v0.3-lts";
 
 function detectPlatform(): Platform {
   if (typeof window === "undefined") return "unknown";
@@ -102,6 +103,7 @@ function getUrlFromPattern(assets: string[], pattern: RegExp) {
 }
 
 export const Download = () => {
+  const { t } = useTranslation();
   const [platform, setPlatform] = useState<Platform>("unknown");
   const [showAll, setShowAll] = useState(false);
 
@@ -115,6 +117,9 @@ export const Download = () => {
 
   return (
     <div className="bg-base-200 dark:bg-base-300 text-base-content min-h-full w-full flex flex-col justify-center items-center p-10 pb-48">
+      <div className="bg-base-100 rounded-lg px-5 py-3 mb-6 max-w-md w-full text-center text-sm opacity-80">
+        {t("download.disclaimer")}
+      </div>
       <img src="/zmk-mac-app-icon.webp" alt="ZMK Studio" className="w-64" />
       <div className="text-3xl mb-1">ZMK Studio</div>
       <div className="text-md mb-1 opacity-70">
@@ -131,7 +136,7 @@ export const Download = () => {
                   className="p-3 text-lg bg-primary hover:opacity-85 active:opacity-70 text-primary-content rounded-lg justify-center items-center gap-3 flex"
                 >
                   <FontAwesomeIcon icon={PlatformMetadata[platform].icon} className="h-6"/>{" "}
-                  Download for {link.name}
+                  {t("download.downloadFor", { name: link.name })}
                 </a>
               ))}
             </div>
@@ -143,7 +148,7 @@ export const Download = () => {
               onClick={() => setShowAll(!showAll)}
               className="text-primary text-left hover:underline"
             >
-              {showAll ? "Hide" : "Show"} all downloads
+              {showAll ? t("download.hideAll") : t("download.showAll")}
             </button>
           )}
           {showAll && (
@@ -168,9 +173,9 @@ export const Download = () => {
       </div>
       <a
         className="text-md hover:underline"
-        href="https://github.com/zmkfirmware/zmk-studio/releases"
+        href="https://github.com/ph-design/zmk-studio/releases"
       >
-        See GitHub Releases →
+        {t("download.seeReleases")}
       </a>
     </div>
   );

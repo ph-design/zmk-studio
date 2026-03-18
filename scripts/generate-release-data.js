@@ -8,7 +8,7 @@ const __dirname = path.resolve(__filename, "../..");
 async function generateReleaseData() {
   try {
     const response = await fetch(
-      "https://api.github.com/repos/zmkfirmware/zmk-studio/releases/latest",
+      "https://api.github.com/repos/ph-design/zmk-studio/releases/latest",
       {
         headers: process.env.GITHUB_TOKEN
           ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` }
