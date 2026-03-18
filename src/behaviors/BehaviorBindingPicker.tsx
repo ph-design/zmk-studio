@@ -19,6 +19,10 @@ import {
   hid_usage_get_label,
 } from "../hid-usages";
 
+const DISPLAY_NAME_OVERRIDES: Record<string, string> = {
+  z_so_off: "Soft Off",
+};
+
 export interface BehaviorBindingPickerProps {
   binding: BehaviorBinding;
   behaviors: GetBehaviorDetailsResponse[];
@@ -186,10 +190,13 @@ export const BehaviorBindingPicker = ({
   }, [categorized, behaviorId]);
 
   const [selectedCategoryId, setSelectedCategoryId] = useState(currentCategory);
+  const [browsing, setBrowsing] = useState(false);
 
   useEffect(() => {
-    setSelectedCategoryId(currentCategory);
-  }, [currentCategory]);
+    if (!browsing) {
+      setSelectedCategoryId(currentCategory);
+    }
+  }, [currentCategory, browsing]);
 
   const metadata = useMemo(
     () => behaviors.find((b) => b.id == behaviorId)?.metadata,
@@ -245,19 +252,17 @@ export const BehaviorBindingPicker = ({
       setBehaviorId(id);
       setParam1(0);
       setParam2(0);
+      setBrowsing(false);
     },
     []
   );
 
   const handleCategorySelect = useCallback(
     (catId: string) => {
+      setBrowsing(true);
       setSelectedCategoryId(catId);
-      const catBehaviors = categorized[catId] || [];
-      if (catBehaviors.length > 0 && !catBehaviors.some((b) => b.id === behaviorId)) {
-        handleBehaviorSelect(catBehaviors[0].id);
-      }
     },
-    [categorized, behaviorId, handleBehaviorSelect]
+    []
   );
 
   const param1Values = useMemo(
@@ -280,8 +285,14 @@ export const BehaviorBindingPicker = ({
   const param1IsHid = hasHidUsage(param1Values);
   const param2IsHid = hasHidUsage(param2Values);
 
+  const allParam2Values = useMemo(
+    () => metadata?.flatMap((m) => m.param2) || [],
+    [metadata]
+  );
+  const anyParam2IsHid = hasHidUsage(allParam2Values);
+
   const hidUsagePages = useMemo(() => {
-    const hidParam = [...param1Values, ...param2Values].find(
+    const hidParam = [...param1Values, ...param2Values, ...allParam2Values].find(
       (v) => v.hidUsage
     );
     if (!hidParam?.hidUsage) return null;
@@ -298,6 +309,11 @@ export const BehaviorBindingPicker = ({
 
   const categoryBehaviors = categorized[selectedCategoryId] || [];
 
+  const isBehaviorInCategory = !browsing && categoryBehaviors.some((b) => b.id === behaviorId);
+
+  const [hoveredBehaviorId, setHoveredBehaviorId] = useState<number | null>(null);
+  const hoveredBehavior = categoryBehaviors.find((b) => b.id === hoveredBehaviorId);
+
   return (
     <div className="flex gap-0 min-h-0 h-full">
       <div className="flex flex-col gap-0.5 w-36 flex-shrink-0 pr-2 border-r border-base-300 overflow-y-auto">
@@ -311,23 +327,41 @@ export const BehaviorBindingPicker = ({
         ))}
       </div>
 
-      <div className="flex flex-col gap-0.5 flex-shrink-0 px-2 border-r border-base-300 overflow-y-auto">
+      <div key={selectedCategoryId} className="flex flex-col gap-0.5 flex-shrink-0 px-2 border-r border-base-300 overflow-y-auto animate-fade-in"
+        onMouseLeave={() => setHoveredBehaviorId(null)}
+      >
         {categoryBehaviors.map((b) => (
           <button
             key={b.id}
             onClick={() => handleBehaviorSelect(b.id)}
+            onMouseEnter={() => setHoveredBehaviorId(b.id)}
             className={`px-3 py-1.5 rounded text-sm text-left cursor-pointer transition-colors whitespace-nowrap ${behaviorId === b.id
               ? "bg-primary text-primary-content"
               : "text-base-content hover:bg-base-300"
               }`}
           >
-            {b.displayName}
+            {DISPLAY_NAME_OVERRIDES[b.displayName] ?? b.displayName}
           </button>
         ))}
       </div>
 
       <div className="flex-1 pl-3 min-w-0 flex flex-col">
-        {param1IsHid && param2IsHid && hidUsagePages && (
+        {!isBehaviorInCategory ? (
+          <div className="flex items-center justify-center h-full px-6">
+            <div
+              key={hoveredBehavior ? hoveredBehavior.id : '__hint'}
+              className="flex flex-col items-center gap-2 text-center max-w-md animate-fade-in"
+            >
+              {hoveredBehavior ? (<>
+                <span className="text-lg font-semibold text-base-content">{DISPLAY_NAME_OVERRIDES[hoveredBehavior.displayName] ?? hoveredBehavior.displayName}</span>
+                <span className="text-sm text-base-content/60 leading-relaxed">{t(`behaviorDesc.${hoveredBehavior.displayName}`, '')}</span>
+              </>) : (
+                <span className="text-sm text-base-content/40">{t('selectBehaviorHint', '将鼠标悬停在左侧行为上查看说明')}</span>
+              )}
+            </div>
+          </div>
+        ) : (<>
+        {param1IsHid && anyParam2IsHid && hidUsagePages && (
           <DualHidPicker
             param1={param1}
             param2={param2}
@@ -337,24 +371,25 @@ export const BehaviorBindingPicker = ({
           />
         )}
 
-        {(param1IsHid !== param2IsHid) && (param1IsHid || param2IsHid) && hidUsagePages && (
+        {(param1IsHid !== anyParam2IsHid) && (param1IsHid || anyParam2IsHid) && hidUsagePages && (
           <>
             {hasLayerId(param1Values) && (
-              <div className="mb-2">
-                <InlineParamPicker
-                  values={param1Values}
-                  value={param1}
-                  layers={layers}
-                  onValueChanged={setParam1}
-                  label={t("binding.layer")}
-                />
-              </div>
+              <LayerHidDualPicker
+                layerParam={param1}
+                hidParam={param2}
+                layers={layers}
+                usagePages={hidUsagePages}
+                onLayerChanged={setParam1}
+                onHidChanged={setParam2}
+              />
             )}
-            <HidUsageGrid
-              value={param1IsHid ? param1 : param2}
-              usagePages={hidUsagePages}
-              onValueChanged={param1IsHid ? setParam1 : setParam2}
-            />
+            {!hasLayerId(param1Values) && (
+              <HidUsageGrid
+                value={param1IsHid ? param1 : param2}
+                usagePages={hidUsagePages}
+                onValueChanged={param1IsHid ? setParam1 : setParam2}
+              />
+            )}
           </>
         )}
 
@@ -384,9 +419,10 @@ export const BehaviorBindingPicker = ({
           param2Values.length === 0 &&
           selectedBehavior && (
             <div className="flex items-center justify-center h-full text-base-content/40 text-sm">
-              {selectedBehavior.displayName} — {t("binding.noParametersRequired")}
+              {DISPLAY_NAME_OVERRIDES[selectedBehavior.displayName] ?? selectedBehavior.displayName} — {t("binding.noParametersRequired")}
             </div>
           )}
+        </>)}
       </div>
     </div>
   );
@@ -489,6 +525,83 @@ const DualHidPicker = ({
         usagePages={usagePages}
         onValueChanged={handleValueChanged}
       />
+    </div>
+  );
+};
+
+const LayerHidDualPicker = ({
+  layerParam,
+  hidParam,
+  layers,
+  usagePages,
+  onLayerChanged,
+  onHidChanged,
+}: {
+  layerParam?: number;
+  hidParam?: number;
+  layers: { id: number; name: string }[];
+  usagePages: { id: number; min?: number; max?: number }[];
+  onLayerChanged: (value?: number) => void;
+  onHidChanged: (value?: number) => void;
+}) => {
+  const { t } = useTranslation();
+  const [activeSlot, setActiveSlot] = useState<"hold" | "tap">("tap");
+
+  const holdLabel = layers.find((l) => l.id === layerParam)?.name || "—";
+  const tapLabel = getHidLabel(hidParam);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex gap-2 items-center">
+        <button
+          onClick={() => setActiveSlot("hold")}
+          className={`flex-1 flex flex-col items-center gap-0.5 px-3 py-2 rounded cursor-pointer transition-colors ${activeSlot === "hold"
+            ? "ring-2 ring-primary bg-base-100"
+            : "bg-base-300 hover:bg-base-100"
+            }`}
+        >
+          <span className="text-sm text-base-content/50">{t("binding.hold")}</span>
+          <span className="text-base font-semibold text-base-content truncate max-w-full">
+            {holdLabel}
+          </span>
+        </button>
+        <span className="text-base-content/30 text-lg">+</span>
+        <button
+          onClick={() => setActiveSlot("tap")}
+          className={`flex-1 flex flex-col items-center gap-0.5 px-3 py-2.5 rounded cursor-pointer transition-colors ${activeSlot === "tap"
+            ? "ring-2 ring-primary bg-base-100"
+            : "bg-base-300 hover:bg-base-100"
+            }`}
+        >
+          <span className="text-sm text-base-content/50">{t("binding.tap")}</span>
+          <span className="text-base font-semibold text-base-content truncate max-w-full">
+            {tapLabel}
+          </span>
+        </button>
+      </div>
+
+      {activeSlot === "hold" ? (
+        <div className="flex gap-1.5 flex-wrap">
+          {layers.map(({ name, id }) => (
+            <button
+              key={id}
+              onClick={() => onLayerChanged(id)}
+              className={`px-4 py-1.5 rounded text-sm font-medium cursor-pointer transition-colors ${layerParam === id
+                ? "bg-primary text-primary-content"
+                : "bg-base-100 text-base-content hover:bg-base-300"
+                }`}
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <HidUsageGrid
+          value={hidParam}
+          usagePages={usagePages}
+          onValueChanged={onHidChanged}
+        />
+      )}
     </div>
   );
 };
