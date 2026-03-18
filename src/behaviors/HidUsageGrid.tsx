@@ -2,6 +2,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Checkbox, CheckboxGroup } from "react-aria-components";
 import { useTranslation } from "react-i18next";
 import {
+  Play,
+  SkipForward,
+  SkipBack,
+  Square,
+  VolumeX,
+  Volume2,
+  Volume1,
+  Sun,
+  SunDim,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import {
   hid_usage_from_page_and_id,
   hid_usage_page_get_ids,
   hid_usage_get_label,
@@ -37,27 +49,30 @@ interface KeyTab {
 
 const KEY_TABS: KeyTab[] = [
   {
-    id: "alpha",
-    label: "Alpha",
-    filter: (page, id) => page === 7 && id >= 0x04 && id <= 0x1d,
-  },
-  {
-    id: "numbers",
-    label: "Numbers",
-    filter: (page, id) => page === 7 && id >= 0x1e && id <= 0x27,
-  },
-  {
-    id: "navigation",
-    label: "Navigation",
+    id: "input",
+    label: "Input",
     filter: (page, id) =>
       page === 7 &&
-      ((id >= 0x49 && id <= 0x52) ||
+      ((id >= 0x04 && id <= 0x1d) ||
+        (id >= 0x1e && id <= 0x27) ||
         id === 0x28 ||
         id === 0x29 ||
         id === 0x2a ||
         id === 0x2b ||
         id === 0x2c ||
         id === 0x39),
+  },
+  {
+    id: "controls",
+    label: "Controls",
+    filter: (page, id) =>
+      page === 7 &&
+      ((id >= 0x49 && id <= 0x52) ||
+        id === 0x46 ||
+        id === 0x47 ||
+        id === 0x48 ||
+        id === 0x65 ||
+        (id >= 0xe0 && id <= 0xe7)),
   },
   {
     id: "functions",
@@ -79,12 +94,22 @@ const KEY_TABS: KeyTab[] = [
   {
     id: "media",
     label: "Media",
-    filter: (page) => page === 12,
+    filter: (page, id) =>
+      page === 12 &&
+      (id === 0xcd ||
+        id === 0xb5 ||
+        id === 0xb6 ||
+        id === 0xb7 ||
+        id === 0xe2 ||
+        id === 0xe9 ||
+        id === 0xea ||
+        id === 0x6f ||
+        id === 0x70),
   },
   {
-    id: "modkeys",
-    label: "Modifiers",
-    filter: (page, id) => page === 7 && id >= 0xe0 && id <= 0xe7,
+    id: "keypad",
+    label: "Keypad",
+    filter: (page, id) => page === 7 && id >= 0x54 && id <= 0x63,
   },
   {
     id: "other",
@@ -144,12 +169,26 @@ function mask_mods(value: number) {
 interface KeyGridItem {
   usageValue: number;
   label: string;
+  rawName: string;
   shortLabel: string;
   displayLabel: string;
   pageId: number;
   usageId: number;
   colSpan: 1 | 2 | 3;
 }
+
+// Consumer page (12) usage ID → icon
+const MEDIA_ICONS: Record<number, LucideIcon> = {
+  0xcd: Play,
+  0xb5: SkipForward,
+  0xb6: SkipBack,
+  0xb7: Square,
+  0xe2: VolumeX,
+  0xe9: Volume2,
+  0xea: Volume1,
+  0x6f: Sun,
+  0x70: SunDim,
+};
 
 export interface HidUsageGridProps {
   value?: number;
@@ -163,7 +202,7 @@ export const HidUsageGrid = ({
   onValueChanged,
 }: HidUsageGridProps) => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState("alpha");
+  const [activeTab, setActiveTab] = useState("input");
   const [filter, setFilter] = useState("");
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -203,6 +242,7 @@ export const HidUsageGrid = ({
         keys.push({
           usageValue: hid_usage_from_page_and_id(page.id, usage.Id),
           label,
+          rawName: usage.Name,
           shortLabel: short,
           displayLabel,
           pageId: page.id,
@@ -265,12 +305,16 @@ export const HidUsageGrid = ({
     });
   }, [value, activeTab]);
 
+  const isSearching = filter.length > 0;
+
   const filteredKeys = useMemo(() => {
-    const keys = tabKeys[activeTab] || [];
-    if (!filter) return keys;
+    if (!isSearching) return tabKeys[activeTab] || [];
     const lowerFilter = filter.toLowerCase();
-    return keys.filter((k) => k.label.toLowerCase().includes(lowerFilter));
-  }, [tabKeys, activeTab, filter]);
+    return allKeys.filter((k) => {
+      const hay = `${k.label}\0${k.rawName}\0${k.shortLabel}\0${k.displayLabel}`.toLowerCase();
+      return hay.includes(lowerFilter);
+    });
+  }, [tabKeys, activeTab, filter, isSearching, allKeys]);
 
   const selectedUsageValue = value !== undefined ? mask_mods(value) : undefined;
 
@@ -302,20 +346,27 @@ export const HidUsageGrid = ({
     <div className="flex gap-3 min-h-0 flex-1">
       <div className="flex-1 flex flex-col min-w-0">
         <div className="flex items-center gap-2 mb-2 flex-wrap">
-          <div className="flex gap-1 flex-wrap">
-            {availableTabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-3 py-1 rounded text-sm transition-colors cursor-pointer ${activeTab === tab.id
-                    ? "bg-primary text-primary-content"
-                    : "bg-base-300 text-base-content hover:bg-base-100"
-                  }`}
-              >
-                {t(`hid.tabs.${tab.id}`)}
-              </button>
-            ))}
-          </div>
+          {!isSearching && (
+            <div className="flex gap-1 flex-wrap">
+              {availableTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-3 py-1 rounded text-sm transition-colors cursor-pointer ${activeTab === tab.id
+                      ? "bg-primary text-primary-content"
+                      : "bg-base-300 text-base-content hover:bg-base-100"
+                    }`}
+                >
+                  {t(`hid.tabs.${tab.id}`)}
+                </button>
+              ))}
+            </div>
+          )}
+          {isSearching && (
+            <span className="text-sm text-base-content/50">
+              {filteredKeys.length} {t("hid.general.resultsFound")}
+            </span>
+          )}
           <div className="relative ml-auto">
             <input
               type="text"
@@ -340,22 +391,27 @@ export const HidUsageGrid = ({
           </div>
         </div>
 
-        <div ref={gridRef} className="grid grid-cols-[repeat(auto-fill,minmax(3.2rem,1fr))] gap-1.5 overflow-y-auto max-h-52 pr-1">
+        <div key={isSearching ? "search" : activeTab} ref={gridRef} className="grid grid-cols-[repeat(auto-fill,minmax(3.2rem,1fr))] gap-1.5 overflow-y-auto max-h-52 pr-1 animate-fade-in">
           {filteredKeys.map((key) => {
             const spanClass = key.colSpan === 3 ? "col-span-3" : key.colSpan === 2 ? "col-span-2" : "";
             const isSelected = selectedUsageValue === key.usageValue;
+            const MediaIcon = key.pageId === 12 ? MEDIA_ICONS[key.usageId] : undefined;
             return (
               <button
                 key={key.usageValue}
                 data-selected={isSelected ? "true" : undefined}
                 onClick={() => handleKeyClick(key.usageValue)}
-                title={key.label}
+                title={key.rawName}
                 className={`${spanClass} h-[3.2rem] rounded text-sm font-medium cursor-pointer transition-colors flex items-center justify-center ${isSelected
                     ? "bg-primary text-primary-content"
                     : "bg-base-100 text-base-content hover:bg-base-300"
                   }`}
               >
-                <span className="truncate px-1 leading-tight text-center">{key.displayLabel}</span>
+                {MediaIcon ? (
+                  <MediaIcon size={18} />
+                ) : (
+                  <span className="truncate px-1 leading-tight text-center">{key.displayLabel}</span>
+                )}
               </button>
             );
           })}
