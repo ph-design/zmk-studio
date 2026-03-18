@@ -84,6 +84,33 @@
     "hold": "Hold",
     "tap": "Tap"
   },
+  "selectBehaviorHint": "Hover over a behavior on the left to see its description",
+  "behaviorDesc": {
+    "Key Press": "Send a keycode on press/release",
+    "None": "Block the key — events won't pass to layers below",
+    "Transparent": "Pass through to the next active layer below",
+    "Momentary Layer": "Activate a layer while held, deactivate on release",
+    "To Layer": "Switch to a layer and deactivate all others except default",
+    "Toggle Layer": "Toggle a layer on/off",
+    "Layer-Tap": "Hold → activate layer, Tap → send keypress (tap-preferred)",
+    "Sticky Layer": "Activate a layer for the next keypress only (one-shot layer)",
+    "Mod-Tap": "Hold → modifier, Tap → keypress (hold-preferred)",
+    "Sticky Key": "Keep a modifier active for the next keypress (one-shot mod)",
+    "Grave/Escape": "Escape by default, grave (`) when Shift or GUI is held",
+    "Key Repeat": "Repeat the last keycode",
+    "Key Toggle": "Toggle a key on/off — press to hold, press again to release",
+    "Caps Word": "Auto-capitalize until a non-alphanumeric key is pressed",
+    "Bluetooth": "Manage BT profiles: select, switch, or clear pairings",
+    "Output Selection": "Choose between USB and BLE output",
+    "External Power": "Toggle VCC external power on/off",
+    "Reset": "Reset and re-run the current firmware",
+    "Bootloader": "Reboot into bootloader for flashing",
+    "z_so_off": "Soft power off. Wake with the on/off or reset button",
+    "Studio Unlock": "Unlock ZMK Studio access on this device",
+    "Mouse Key Press": "Send mouse button clicks (left/right/middle, btn 4-5)",
+    "mouse_move": "Move the mouse cursor",
+    "mouse_scroll": "Scroll vertically or horizontally"
+  },
   "lighting": {
     "title": "Lighting",
     "rgbUnderglow": "RGB Underglow",
@@ -109,23 +136,24 @@
       "bluetooth": "Bluetooth",
       "lighting": "Lighting",
       "system": "System",
+      "mouse": "Mouse",
       "other": "Other"
     }
   },
   "hid": {
     "tabs": {
-      "alpha": "Alpha",
-      "numbers": "Numbers",
-      "navigation": "Navigation",
+      "input": "Input",
+      "controls": "Controls",
       "functions": "Functions",
       "symbols": "Symbols",
       "media": "Media",
-      "modkeys": "Modifiers",
+      "keypad": "Keypad",
       "other": "Other"
     },
     "general": {
       "filter": "Filter...",
       "noKeys": "No keys found",
+      "resultsFound": "results found",
       "modifiersTitle": "Modifiers",
       "implicitModifiers": "Implicit Modifiers"
     }
@@ -152,5 +180,12 @@
   },
   "idle": {
     "hint": "Click a key above to start editing"
+  },
+  "download": {
+    "disclaimer": "This is NOT the official ZMK Studio. Please do not report issues to the official ZMK project.",
+    "downloadFor": "Download for {{name}}",
+    "showAll": "Show all downloads",
+    "hideAll": "Hide all downloads",
+    "seeReleases": "See GitHub Releases →"
   }
 }

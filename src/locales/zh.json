@@ -12,7 +12,7 @@
   },
   "welcome": {
     "title": "欢迎使用 ZMK Studio",
-    "selectConnection": "选择连接类型。",
+    "selectConnection": "选择连接方式。",
     "selectDevice": "选择一个设备:",
     "refresh": "刷新",
     "unsupportedPrefix": "您的浏览器不受支持。ZMK Studio 使用",
@@ -84,6 +84,33 @@
     "hold": "长按",
     "tap": "点击"
   },
+  "selectBehaviorHint": "将鼠标悬停在左侧行为上查看说明",
+  "behaviorDesc": {
+    "Key Press": "发送按键码",
+    "None": "屏蔽此键，事件不会传递到下层",
+    "Transparent": "透传到下一个激活层",
+    "Momentary Layer": "按住激活层，松开禁用",
+    "To Layer": "切换到指定层，关闭其他非默认层",
+    "Toggle Layer": "开关层",
+    "Layer-Tap": "按住 → 激活层，轻按 → 发送按键（tap-preferred）",
+    "Sticky Layer": "激活层仅对下一次按键生效（one-shot layer）",
+    "Mod-Tap": "按住 → 修饰键，轻按 → 发送按键（hold-preferred）",
+    "Sticky Key": "修饰键对下一次按键生效（one-shot mod）",
+    "Grave/Escape": "默认 Escape，按住 Shift/GUI 时发送 `",
+    "Key Repeat": "重复上一次按键",
+    "Key Toggle": "切换按键状态：未按下则按住，已按下则释放",
+    "Caps Word": "自动大写字母，遇到非字母数字键时取消",
+    "Bluetooth": "管理蓝牙配置：选择、切换、清除配对",
+    "Output Selection": "切换 USB / 蓝牙输出",
+    "External Power": "开关 VCC 外部供电",
+    "Reset": "重启键盘",
+    "Bootloader": "进入 Bootloader 刷写固件",
+    "z_so_off": "软关机，通过开关或 Reset 按钮唤醒",
+    "Studio Unlock": "解锁 ZMK Studio 写入权限",
+    "Mouse Key Press": "鼠标按键（左/右/中键，按钮 4-5）",
+    "mouse_move": "移动鼠标光标",
+    "mouse_scroll": "垂直或水平滚动"
+  },
   "lighting": {
     "title": "灯光",
     "rgbUnderglow": "RGB 底灯",
@@ -109,23 +136,24 @@
       "bluetooth": "蓝牙",
       "lighting": "灯光",
       "system": "系统",
+      "mouse": "鼠标",
       "other": "其他"
     }
   },
   "hid": {
     "tabs": {
-      "alpha": "字母",
-      "numbers": "数字",
-      "navigation": "导航",
+      "input": "输入",
+      "controls": "控制",
       "functions": "功能",
       "symbols": "符号",
       "media": "媒体",
-      "modkeys": "修饰键",
+      "keypad": "小键盘",
       "other": "其他"
     },
     "general": {
       "filter": "搜索...",
       "noKeys": "未找到按键",
+      "resultsFound": "个结果",
       "modifiersTitle": "修饰键",
       "implicitModifiers": "隐式修饰键"
     }
@@ -152,5 +180,12 @@
   },
   "idle": {
     "hint": "点击上方的按键开始编辑"
+  },
+  "download": {
+    "disclaimer": "这不是官方版本的 ZMK Studio，请勿将问题报告给ZMK官方。",
+    "downloadFor": "下载 {{name}} 版本",
+    "showAll": "显示所有下载",
+    "hideAll": "隐藏所有下载",
+    "seeReleases": "查看 GitHub Releases →"
   }
 }
