@@ -13,5 +13,6 @@
     "Mod-Tap": {"short": ""},
     "Layer-Tap": {"short": ""},
     "None": {"short": ""},
-    "Transparent": {"short": ""}
+    "Transparent": {"short": ""},
+    "z_so_off": {"short": "Soft Off"}
 }

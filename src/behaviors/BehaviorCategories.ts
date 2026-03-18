@@ -7,6 +7,7 @@ import {
   Settings,
   MoreHorizontal,
   Sun,
+  Mouse,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -53,7 +54,7 @@ export const BEHAVIOR_CATEGORIES: BehaviorCategory[] = [
     id: "bluetooth",
     label: "Bluetooth",
     icon: Bluetooth,
-    patterns: ["Bluetooth"],
+    patterns: ["Bluetooth", "Output Selection"],
   },
   {
     id: "system",
@@ -61,10 +62,10 @@ export const BEHAVIOR_CATEGORIES: BehaviorCategory[] = [
     icon: Settings,
     patterns: [
       "External Power",
-      "Output Selection",
       "Reset",
       "Bootloader",
       "Studio Unlock",
+      "z_so_off",
     ],
   },
   {
@@ -72,6 +73,12 @@ export const BEHAVIOR_CATEGORIES: BehaviorCategory[] = [
     label: "Lighting",
     icon: Sun,
     patterns: ["Underglow"],
+  },
+  {
+    id: "mouse",
+    label: "Mouse",
+    icon: Mouse,
+    patterns: ["Mouse Key Press", "mouse_move", "mouse_scroll"],
   },
   {
     id: "other",
