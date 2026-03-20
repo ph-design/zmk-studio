@@ -126,7 +126,23 @@
     "turnOnHint": "开启灯光后可调整参数",
     "noEffects": "无可用灯效",
     "on": "开",
-    "off": "关"
+    "off": "关",
+    "layerLed": {
+      "title": "层灯",
+      "loading": "加载层灯数据...",
+      "selectKey": "点击按键或拖动框选，然后在下方编辑颜色",
+      "editKey": "按键 {{key}}",
+      "editKeys": "已选 {{count}} 个按键",
+      "clear": "清除"
+    },
+    "capsLock": {
+      "title": "CapsLock 指示灯",
+      "enabled": "启用",
+      "onColor": "亮灯颜色",
+      "offColor": "灭灯颜色",
+      "keyPosition": "按键位置: {{pos}}",
+      "notConfigured": "固件未配置 CapsLock 指示灯"
+    }
   },
   "behavior": {
     "category": {

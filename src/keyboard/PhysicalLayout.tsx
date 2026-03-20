@@ -31,10 +31,11 @@ export function deserializeLayoutZoom(value: string): LayoutZoom {
 interface PhysicalLayoutProps {
   positions: Array<KeyPosition>;
   selectedPosition?: number;
+  selectedPositions?: Set<number>;
   oneU?: number;
   hoverZoom?: boolean;
   zoom?: LayoutZoom;
-  onPositionClicked?: (position: number) => void;
+  onPositionClicked?: (position: number, event: React.MouseEvent) => void;
 }
 
 interface PhysicalLayoutPositionLocation {
@@ -123,22 +124,26 @@ export const PhysicalLayout = ({
     .map((k) => k.y + k.height)
     .reduce((a, b) => Math.max(a, b), 0);
 
-  const positionItems = positions.map((p, idx) => (
-    <div className="absolute" style={scalePosition(p, oneU)}>
-      <div
-        key={p.id}
-        onClick={() => onPositionClicked?.(idx)}
-        className="hover:[transform:translateZ(100px)] transition-transform duration-200"
-      >
-        <Key
-          oneU={oneU}
-          hoverZoom={props.hoverZoom}
-          selected={idx === selectedPosition}
-          {...p}
-        />
+  const positionItems = positions.map((p, idx) => {
+    const isSelected = props.selectedPositions
+      ? props.selectedPositions.has(idx)
+      : idx === selectedPosition;
+    return (
+      <div key={p.id} className="absolute" style={scalePosition(p, oneU)}>
+        <div
+          onClick={(e) => onPositionClicked?.(idx, e)}
+          className="hover:[transform:translateZ(100px)] transition-transform duration-200"
+        >
+          <Key
+            oneU={oneU}
+            hoverZoom={props.hoverZoom}
+            selected={isSelected}
+            {...p}
+          />
+        </div>
       </div>
-    </div>
-  ));
+    );
+  });
 
   return (
     <div

@@ -126,7 +126,23 @@
     "turnOnHint": "Turn on a light source to adjust settings",
     "noEffects": "No effects available",
     "on": "ON",
-    "off": "OFF"
+    "off": "OFF",
+    "layerLed": {
+      "title": "Layer LED",
+      "loading": "Loading layer LED data...",
+      "selectKey": "Click keys or drag to select, then edit color below",
+      "editKey": "Key {{key}}",
+      "editKeys": "{{count}} keys selected",
+      "clear": "Clear"
+    },
+    "capsLock": {
+      "title": "CapsLock Indicator",
+      "enabled": "Enabled",
+      "onColor": "On Color",
+      "offColor": "Off Color",
+      "keyPosition": "Key Position: {{pos}}",
+      "notConfigured": "CapsLock indicator not configured in firmware"
+    }
   },
   "behavior": {
     "category": {

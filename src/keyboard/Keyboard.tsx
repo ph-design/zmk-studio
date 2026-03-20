@@ -18,6 +18,7 @@ import {
   Layer,
 } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import type { GetBehaviorDetailsResponse } from "@zmkfirmware/zmk-studio-ts-client/behaviors";
+import type { GetLayerLedColorsResponse } from "@zmkfirmware/zmk-studio-ts-client/lighting";
 
 import { LayerPicker } from "./LayerPicker";
 import { PhysicalLayoutPicker } from "./PhysicalLayoutPicker";
@@ -34,6 +35,7 @@ import { useLocalStorageState } from "../misc/useLocalStorageState";
 import { useTranslation } from "react-i18next";
 import IdlePanel from "./IdlePanel";
 import LightingControl from "../lighting/LightingControl";
+import LayerLedMap from "../lighting/LayerLedMap";
 
 type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
 
@@ -189,13 +191,98 @@ export default function Keyboard() {
   const [bottomTab, setBottomTab] = useState<"keymap" | "lighting">("keymap");
   const behaviors = useBehaviors();
 
+  const [ledData, setLedData] = useState<GetLayerLedColorsResponse | null>(null);
+  const [selectedLedPositions, setSelectedLedPositions] = useState<Set<number>>(new Set());
+  const [hasLayerLed, setHasLayerLed] = useState(false);
+
   const conn = useContext(ConnectionContext);
   const undoRedo = useContext(UndoRedoContext);
 
   useEffect(() => {
     setSelectedLayerIndex(0);
     setSelectedKeyPosition(undefined);
+    setSelectedLedPositions(new Set());
+    setLedData(null);
+    setHasLayerLed(false);
   }, [conn]);
+
+  useEffect(() => {
+    if (!conn.conn || bottomTab !== "lighting") {
+      return;
+    }
+
+    let ignore = false;
+    async function fetchLedData() {
+      if (!conn.conn) return;
+      try {
+        const resp = await call_rpc(conn.conn, {
+          lighting: { getLayerLedColors: true },
+        });
+        if (!ignore && resp.lighting?.getLayerLedColors) {
+          setLedData(resp.lighting.getLayerLedColors);
+          setHasLayerLed(true);
+        }
+      } catch {
+        if (!ignore) setHasLayerLed(false);
+      }
+    }
+    fetchLedData();
+    return () => { ignore = true; };
+  }, [conn, bottomTab]);
+
+  const handleLayerLedColorChanged = useCallback(
+    async (positions: number[], color: number) => {
+      if (!conn.conn || !keymap || !ledData) return;
+      const layerIdx = selectedLayerIndex;
+      const layerId = keymap.layers[layerIdx]?.id;
+      if (layerId === undefined) return;
+
+      setLedData(produce((draft) => {
+        if (!draft) return;
+        let layerConfig = draft.layers.find((l) => l.layerId === layerId);
+        if (!layerConfig) {
+          layerConfig = { layerId, bindings: [] };
+          draft.layers.push(layerConfig);
+        }
+        for (const pos of positions) {
+          const existing = layerConfig.bindings.find((b) => b.keyPosition === pos);
+          if (existing) {
+            existing.color = color;
+          } else {
+            layerConfig.bindings.push({ keyPosition: pos, color });
+          }
+        }
+      }));
+
+      for (const pos of positions) {
+        try {
+          await call_rpc(conn.conn, {
+            lighting: { setLayerLedBinding: { layerId, keyPosition: pos, color } },
+          });
+        } catch (e) {
+          console.error("Failed to set layer LED binding", e);
+        }
+      }
+    },
+    [conn, keymap, ledData, selectedLayerIndex]
+  );
+
+  const handleLayerLedEnabledChanged = useCallback(
+    async (enabled: boolean) => {
+      if (!conn.conn) return;
+      setLedData(produce((draft) => {
+        if (draft) draft.enabled = enabled;
+      }));
+      try {
+        await call_rpc(conn.conn, {
+          lighting: { setLayerLedEnabled: { enabled } },
+        });
+      } catch (e) {
+        console.error("Failed to set layer LED enabled", e);
+      }
+    },
+    [conn]
+  );
 
   useEffect(() => {
     async function performSetRequest() {
@@ -536,15 +623,27 @@ export default function Keyboard() {
       </div>
       {layouts && keymap && behaviors && (
         <div className="p-2 col-start-2 row-start-1 grid items-center justify-center relative min-w-0">
-          <KeymapComp
-            keymap={keymap}
-            layout={layouts[selectedPhysicalLayoutIndex]}
-            behaviors={behaviors}
-            scale={keymapScale}
-            selectedLayerIndex={selectedLayerIndex}
-            selectedKeyPosition={selectedKeyPosition}
-            onKeyPositionClicked={setSelectedKeyPosition}
-          />
+          {bottomTab === "lighting" ? (
+            <LayerLedMap
+              keymap={keymap}
+              layout={layouts[selectedPhysicalLayoutIndex]}
+              scale={keymapScale}
+              selectedLayerIndex={selectedLayerIndex}
+              ledData={ledData}
+              selectedPositions={selectedLedPositions}
+              onSelectionChanged={setSelectedLedPositions}
+            />
+          ) : (
+            <KeymapComp
+              keymap={keymap}
+              layout={layouts[selectedPhysicalLayoutIndex]}
+              behaviors={behaviors}
+              scale={keymapScale}
+              selectedLayerIndex={selectedLayerIndex}
+              selectedKeyPosition={selectedKeyPosition}
+              onKeyPositionClicked={setSelectedKeyPosition}
+            />
+          )}
           <select
             className="absolute top-2 right-2 h-8 rounded px-2"
             value={keymapScale}
@@ -604,7 +703,16 @@ export default function Keyboard() {
                 <IdlePanel />
               )
             ) : (
-              <LightingControl />
+              <LightingControl
+                hasLayerLed={hasLayerLed}
+                selectedLedPositions={selectedLedPositions}
+                ledData={ledData}
+                selectedLayerIndex={selectedLayerIndex}
+                keymap={keymap}
+                onLayerLedColorChanged={handleLayerLedColorChanged}
+                layerLedEnabled={ledData?.enabled ?? true}
+                onLayerLedEnabledChanged={handleLayerLedEnabledChanged}
+              />
             )}
           </div>
         </div>
