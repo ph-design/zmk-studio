@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.5](https://github.com/ph-design/zmk-studio/compare/v0.0.4...v0.0.5) (2026-03-20)
+
+
+### Bug Fixes
+
+* use wrapper message for layer LED enabled RPC call ([789cc32](https://github.com/ph-design/zmk-studio/commit/789cc3272ae197cbcb35fd9c269317daa4e7de4f))
+
 ## [0.0.4](https://github.com/ph-design/zmk-studio/compare/v0.0.3...v0.0.4) (2026-03-19)
 
 
