@@ -1,6 +1,5 @@
 {
   "lockfileVersion": 1,
-  "configVersion": 0,
   "workspaces": {
     "": {
       "name": "zmk-studio",
@@ -11,7 +10,7 @@
         "@tailwindcss/container-queries": "^0.1.1",
         "@tauri-apps/api": "^2.10.1",
         "@tauri-apps/plugin-cli": "^2.4.1",
-        "@zmkfirmware/zmk-studio-ts-client": "npm:@ph-design/zmk-studio-ts-client-fork@0.0.18-dev.20260223090613.5764553",
+        "@zmkfirmware/zmk-studio-ts-client": "npm:@ph-design/zmk-studio-ts-client-fork@0.0.18-dev.20260320181625.956ca90",
         "emittery": "^1.2.1",
         "i18next": "^25.8.18",
         "immer": "^10.2.0",
@@ -680,7 +679,7 @@
 
     "@vitest/utils": ["@vitest/utils@2.1.9", "", { "dependencies": { "@vitest/pretty-format": "2.1.9", "loupe": "^3.1.2", "tinyrainbow": "^1.2.0" } }, "sha512-v0psaMSkNJ3A2NMrUEHFRzJtDPFn+/VWZ5WxImB21T9fjucJRmS7xCS3ppEnARb9y11OAzaD+P2Ps+b+BGX5iQ=="],
 
-    "@zmkfirmware/zmk-studio-ts-client": ["@ph-design/zmk-studio-ts-client-fork@0.0.18-dev.20260223090613.5764553", "https://npm.pkg.github.com/download/@ph-design/zmk-studio-ts-client-fork/0.0.18-dev.20260223090613.5764553/1d0eab96d7d334325fe6a5b54f01416f874dfaf3", { "dependencies": { "async-mutex": "^0.5.0", "protobufjs": "^7.3.2" } }, "sha512-vTLCqQ3KWKKnjUaN12W6fLjrtUCFAFtyzjT1UkYYD1UppmwrjuYD9/ugqL9jDBtpDqtCjlfNzMf6vlycowhBTA=="],
+    "@zmkfirmware/zmk-studio-ts-client": ["@ph-design/zmk-studio-ts-client-fork@0.0.18-dev.20260320181625.956ca90", "https://npm.pkg.github.com/download/@ph-design/zmk-studio-ts-client-fork/0.0.18-dev.20260320181625.956ca90/8f016477d52fddd7f5e94b386dbc65e1ea0bb8bd", { "dependencies": { "async-mutex": "^0.5.0", "protobufjs": "^7.3.2" } }, "sha512-lBpE8WVSzC5okG+zYBZL5sGwjNxrY5JSFcUo1cYvSVvYKXiZ7WjHFxWFQmyW3Qu3P8lM6MWiR8LW1hFj13j6Yg=="],
 
     "acorn": ["acorn@8.11.3", "", { "bin": "bin/acorn" }, ""],
 
