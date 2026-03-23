@@ -3,7 +3,9 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -18,7 +20,12 @@ import {
   Layer,
 } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import type { GetBehaviorDetailsResponse } from "@zmkfirmware/zmk-studio-ts-client/behaviors";
-import type { GetLayerLedColorsResponse } from "@zmkfirmware/zmk-studio-ts-client/lighting";
+import type {
+  GetLayerLedColorsResponse,
+  RgbUnderglowState,
+  BacklightState,
+  CapsLockIndicatorState,
+} from "@zmkfirmware/zmk-studio-ts-client/lighting";
 
 import { LayerPicker } from "./LayerPicker";
 import { PhysicalLayoutPicker } from "./PhysicalLayoutPicker";
@@ -36,6 +43,7 @@ import { useTranslation } from "react-i18next";
 import IdlePanel from "./IdlePanel";
 import LightingControl from "../lighting/LightingControl";
 import LayerLedMap from "../lighting/LayerLedMap";
+import { useSub } from "../usePubSub";
 
 type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
 
@@ -195,8 +203,17 @@ export default function Keyboard() {
   const [selectedLedPositions, setSelectedLedPositions] = useState<Set<number>>(new Set());
   const [hasLayerLed, setHasLayerLed] = useState(false);
 
+  const [rgbState, setRgbState] = useState<RgbUnderglowState | null>(null);
+  const [backlightState, setBacklightState] = useState<BacklightState | null>(null);
+  const [capsLockState, setCapsLockState] = useState<CapsLockIndicatorState | null>(null);
+  const [hasRgb, setHasRgb] = useState(false);
+  const [hasBacklight, setHasBacklight] = useState(false);
+  const [hasCapsLock, setHasCapsLock] = useState(false);
+
   const conn = useContext(ConnectionContext);
+  const lockState = useContext(LockStateContext);
   const undoRedo = useContext(UndoRedoContext);
+  const isUnlocked = lockState === LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED;
 
   useEffect(() => {
     setSelectedLayerIndex(0);
@@ -204,31 +221,72 @@ export default function Keyboard() {
     setSelectedLedPositions(new Set());
     setLedData(null);
     setHasLayerLed(false);
+    setRgbState(null);
+    setBacklightState(null);
+    setCapsLockState(null);
+    setHasRgb(false);
+    setHasBacklight(false);
+    setHasCapsLock(false);
+  }, [conn]);
+
+  const fetchAllLighting = useCallback(async (ignore?: { current: boolean }) => {
+    if (!conn.conn) return;
+
+    const [ledResp, rgbResp, blResp, capsResp] = await Promise.allSettled([
+      call_rpc(conn.conn, { lighting: { getLayerLedColors: true } }),
+      call_rpc(conn.conn, { lighting: { getRgbUnderglowState: true } }),
+      call_rpc(conn.conn, { lighting: { getBacklightState: true } }),
+      call_rpc(conn.conn, { lighting: { getCapsLockIndicator: true } }),
+    ]);
+
+    if (ignore?.current) return;
+
+    if (ledResp.status === "fulfilled" && ledResp.value.lighting?.getLayerLedColors) {
+      setLedData(ledResp.value.lighting.getLayerLedColors);
+      setHasLayerLed(true);
+    }
+    if (rgbResp.status === "fulfilled" && rgbResp.value.lighting?.getRgbUnderglowState) {
+      setRgbState(rgbResp.value.lighting.getRgbUnderglowState);
+      setHasRgb(true);
+    }
+    if (blResp.status === "fulfilled" && blResp.value.lighting?.getBacklightState) {
+      setBacklightState(blResp.value.lighting.getBacklightState);
+      setHasBacklight(true);
+    }
+    if (capsResp.status === "fulfilled" && capsResp.value.lighting?.getCapsLockIndicator) {
+      setCapsLockState(capsResp.value.lighting.getCapsLockIndicator);
+      setHasCapsLock(true);
+    }
   }, [conn]);
 
   useEffect(() => {
-    if (!conn.conn || bottomTab !== "lighting") {
+    if (!conn.conn || !isUnlocked) {
       return;
     }
+    const ignore = { current: false };
+    fetchAllLighting(ignore);
+    return () => { ignore.current = true; };
+  }, [conn, isUnlocked, fetchAllLighting]);
 
-    let ignore = false;
-    async function fetchLedData() {
-      if (!conn.conn) return;
-      try {
-        const resp = await call_rpc(conn.conn, {
-          lighting: { getLayerLedColors: true },
-        });
-        if (!ignore && resp.lighting?.getLayerLedColors) {
-          setLedData(resp.lighting.getLayerLedColors);
-          setHasLayerLed(true);
-        }
-      } catch {
-        if (!ignore) setHasLayerLed(false);
-      }
+  // Re-fetch when user opens the lighting tab
+  useEffect(() => {
+    if (!conn.conn || !isUnlocked || bottomTab !== "lighting") {
+      return;
     }
-    fetchLedData();
-    return () => { ignore = true; };
-  }, [conn, bottomTab]);
+    const ignore = { current: false };
+    fetchAllLighting(ignore);
+    return () => { ignore.current = true; };
+  }, [bottomTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Hot-update via notifications (always active, not just on lighting tab)
+  useSub(
+    "rpc_notification.lighting.rgbUnderglowStateChanged",
+    (state: RgbUnderglowState) => setRgbState(state)
+  );
+  useSub(
+    "rpc_notification.lighting.backlightStateChanged",
+    (state: BacklightState) => setBacklightState(state)
+  );
 
   const handleLayerLedColorChanged = useCallback(
     async (positions: number[], color: number) => {
@@ -664,30 +722,7 @@ export default function Keyboard() {
         </div>
       )}
       {layouts && keymap && (
-        <div className="col-start-2 row-start-2 bg-base-200 min-h-[14rem] flex flex-col">
-          <div className="flex shrink-0">
-            <button
-              className={`px-4 py-1.5 text-sm font-medium transition-colors ${
-                bottomTab === "keymap"
-                  ? "text-primary border-b-2 border-primary"
-                  : "text-base-content/50 hover:text-base-content/70"
-              }`}
-              onClick={() => setBottomTab("keymap")}
-            >
-              {t("keyboard.tab.keymap")}
-            </button>
-            <button
-              className={`px-4 py-1.5 text-sm font-medium transition-colors ${
-                bottomTab === "lighting"
-                  ? "text-primary border-b-2 border-primary"
-                  : "text-base-content/50 hover:text-base-content/70"
-              }`}
-              onClick={() => setBottomTab("lighting")}
-            >
-              {t("keyboard.tab.lighting")}
-            </button>
-          </div>
-          <div className="p-4 flex-1 min-h-0">
+        <BottomPanel bottomTab={bottomTab} setBottomTab={setBottomTab} t={t}>
             {bottomTab === "keymap" ? (
               selectedBinding ? (
                 <BehaviorBindingPicker
@@ -712,11 +747,86 @@ export default function Keyboard() {
                 onLayerLedColorChanged={handleLayerLedColorChanged}
                 layerLedEnabled={ledData?.enabled ?? true}
                 onLayerLedEnabledChanged={handleLayerLedEnabledChanged}
+                rgbState={rgbState}
+                setRgbState={setRgbState}
+                backlightState={backlightState}
+                setBacklightState={setBacklightState}
+                capsLockState={capsLockState}
+                setCapsLockState={setCapsLockState}
+                hasRgb={hasRgb}
+                hasBacklight={hasBacklight}
+                hasCapsLock={hasCapsLock}
               />
             )}
+        </BottomPanel>
+      )}
+    </div>
+  );
+}
+
+function BottomPanel({
+  bottomTab,
+  setBottomTab,
+  t,
+  children,
+}: {
+  bottomTab: string;
+  setBottomTab: (tab: "keymap" | "lighting") => void;
+  t: (key: string) => string;
+  children: React.ReactNode;
+}) {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number | undefined>(undefined);
+
+  useLayoutEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+
+    const measure = () => {
+      setHeight(el.scrollHeight);
+    };
+
+    measure();
+
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [bottomTab]);
+
+  return (
+    <div className="col-start-2 row-start-2 bg-base-200 flex flex-col">
+      <div className="flex shrink-0">
+        <button
+          className={`px-4 py-1.5 text-sm font-medium transition-colors ${
+            bottomTab === "keymap"
+              ? "text-primary border-b-2 border-primary"
+              : "text-base-content/50 hover:text-base-content/70"
+          }`}
+          onClick={() => setBottomTab("keymap")}
+        >
+          {t("keyboard.tab.keymap")}
+        </button>
+        <button
+          className={`px-4 py-1.5 text-sm font-medium transition-colors ${
+            bottomTab === "lighting"
+              ? "text-primary border-b-2 border-primary"
+              : "text-base-content/50 hover:text-base-content/70"
+          }`}
+          onClick={() => setBottomTab("lighting")}
+        >
+          {t("keyboard.tab.lighting")}
+        </button>
+      </div>
+      <div
+        className="overflow-hidden transition-[height] duration-300 ease-in-out"
+        style={{ height: height != null ? `${height}px` : "auto", minHeight: "15rem" }}
+      >
+        <div ref={contentRef} className="p-4">
+          <div key={bottomTab} className="animate-fade-in">
+            {children}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
