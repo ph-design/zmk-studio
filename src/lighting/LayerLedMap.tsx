@@ -151,7 +151,7 @@ export default function LayerLedMap({
       const header: string | undefined = undefined;
 
       return {
-        id: `led-${selectedLayerIndex}-${i}`,
+        id: `led-${i}`,
         header,
         x: k.x / 100.0,
         y: k.y / 100.0,
@@ -160,13 +160,19 @@ export default function LayerLedMap({
         r: (k.r || 0) / 100.0,
         rx: (k.rx || 0) / 100.0,
         ry: (k.ry || 0) / 100.0,
-        children: bgColor ? (
-          <div
-            className="absolute inset-[2px] rounded"
-            style={{ backgroundColor: bgColor }}
-          />
-        ) : (
-          <span className="text-xs opacity-30">—</span>
+        children: (
+          <>
+            <div
+              className="absolute inset-[2px] rounded transition-all duration-300"
+              style={{
+                backgroundColor: bgColor ?? "transparent",
+                opacity: bgColor ? 1 : 0,
+              }}
+            />
+            {!bgColor && (
+              <span className="text-xs opacity-30">—</span>
+            )}
+          </>
         ),
       };
     });

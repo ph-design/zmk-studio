@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { Label } from "react-aria-components";
 import { useTranslation } from "react-i18next";
 import { AlertTriangle, Sun, Lightbulb, Lock, Layers } from "lucide-react";
@@ -7,7 +7,6 @@ import { ConnectionContext } from "../rpc/ConnectionContext";
 import { LockStateContext } from "../rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { call_rpc } from "../rpc/logging";
-import { useSub } from "../usePubSub";
 
 import type {
   RgbUnderglowState,
@@ -34,6 +33,15 @@ export interface LightingControlProps {
   onLayerLedColorChanged?: (positions: number[], color: number) => void;
   layerLedEnabled?: boolean;
   onLayerLedEnabledChanged?: (enabled: boolean) => void;
+  rgbState: RgbUnderglowState | null;
+  setRgbState: React.Dispatch<React.SetStateAction<RgbUnderglowState | null>>;
+  backlightState: BacklightState | null;
+  setBacklightState: React.Dispatch<React.SetStateAction<BacklightState | null>>;
+  capsLockState: CapsLockIndicatorState | null;
+  setCapsLockState: React.Dispatch<React.SetStateAction<CapsLockIndicatorState | null>>;
+  hasRgb: boolean;
+  hasBacklight: boolean;
+  hasCapsLock: boolean;
 }
 
 export default function LightingControl({
@@ -45,6 +53,15 @@ export default function LightingControl({
   onLayerLedColorChanged,
   layerLedEnabled,
   onLayerLedEnabledChanged,
+  rgbState,
+  setRgbState,
+  backlightState,
+  setBacklightState,
+  capsLockState,
+  setCapsLockState,
+  hasRgb,
+  hasBacklight,
+  hasCapsLock,
 }: LightingControlProps) {
   const { t } = useTranslation();
   const conn = useContext(ConnectionContext);
@@ -52,15 +69,6 @@ export default function LightingControl({
   const isUnlocked =
     lockState === LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED;
 
-  const [rgbState, setRgbState] = useState<RgbUnderglowState | null>(null);
-  const [backlightState, setBacklightState] = useState<BacklightState | null>(
-    null
-  );
-  const [hasRgb, setHasRgb] = useState(false);
-  const [hasBacklight, setHasBacklight] = useState(false);
-  const [hasCapsLock, setHasCapsLock] = useState(false);
-  const [capsLockState, setCapsLockState] =
-    useState<CapsLockIndicatorState | null>(null);
   const [selectedSource, setSelectedSource] = useState<LightSource>("rgb");
 
   const [layerLedHsb, setLayerLedHsb] = useState<HsbColor>({ h: 0, s: 100, b: 100 });
@@ -106,65 +114,6 @@ export default function LightingControl({
   }, [selectedLedPositions, onLayerLedColorChanged]);
 
   useEffect(() => {
-    if (!conn.conn || !isUnlocked) {
-      setRgbState(null);
-      setBacklightState(null);
-      setCapsLockState(null);
-      setHasRgb(false);
-      setHasBacklight(false);
-      setHasCapsLock(false);
-      return;
-    }
-
-    let ignore = false;
-
-    async function fetchStates() {
-      if (!conn.conn) return;
-
-      try {
-        const rgbResp = await call_rpc(conn.conn, {
-          lighting: { getRgbUnderglowState: true },
-        });
-        if (!ignore && rgbResp.lighting?.getRgbUnderglowState) {
-          setRgbState(rgbResp.lighting.getRgbUnderglowState);
-          setHasRgb(true);
-        }
-      } catch {
-        if (!ignore) setHasRgb(false);
-      }
-
-      try {
-        const blResp = await call_rpc(conn.conn, {
-          lighting: { getBacklightState: true },
-        });
-        if (!ignore && blResp.lighting?.getBacklightState) {
-          setBacklightState(blResp.lighting.getBacklightState);
-          setHasBacklight(true);
-        }
-      } catch {
-        if (!ignore) setHasBacklight(false);
-      }
-
-      try {
-        const capsResp = await call_rpc(conn.conn, {
-          lighting: { getCapsLockIndicator: true },
-        });
-        if (!ignore && capsResp.lighting?.getCapsLockIndicator) {
-          setCapsLockState(capsResp.lighting.getCapsLockIndicator);
-          setHasCapsLock(true);
-        }
-      } catch {
-        if (!ignore) setHasCapsLock(false);
-      }
-    }
-
-    fetchStates();
-    return () => {
-      ignore = true;
-    };
-  }, [conn, isUnlocked]);
-
-  useEffect(() => {
     if (hasRgb) {
       setSelectedSource("rgb");
     } else if (hasBacklight) {
@@ -173,16 +122,6 @@ export default function LightingControl({
       setSelectedSource("layerLed");
     }
   }, [hasRgb, hasBacklight, hasLayerLed]);
-
-  useSub(
-    "rpc_notification.lighting.rgbUnderglowStateChanged",
-    (state: RgbUnderglowState) => setRgbState(state)
-  );
-
-  useSub(
-    "rpc_notification.lighting.backlightStateChanged",
-    (state: BacklightState) => setBacklightState(state)
-  );
 
   const setRgbProp = useCallback(
     async (props: Partial<RgbUnderglowState>) => {
@@ -487,8 +426,8 @@ export default function LightingControl({
               </button>
             </div>
 
-            <div className={`flex flex-col gap-2 ${!capsLockState.enabled ? "opacity-40 pointer-events-none" : ""}`}>
-              <div className="flex flex-col gap-3">
+            <div className={`flex gap-4 ${!capsLockState.enabled ? "opacity-40 pointer-events-none" : ""}`}>
+              <div className="flex-1 flex flex-col gap-2">
                 <Label className="text-sm text-base-content/60 font-medium">
                   {t("lighting.capsLock.onColor")}
                 </Label>
@@ -501,7 +440,7 @@ export default function LightingControl({
                   disabled={!isUnlocked}
                 />
               </div>
-              <div className="flex flex-col gap-3 mt-2">
+              <div className="flex-1 flex flex-col gap-2">
                 <Label className="text-sm text-base-content/60 font-medium">
                   {t("lighting.capsLock.offColor")}
                 </Label>
@@ -514,12 +453,12 @@ export default function LightingControl({
                   disabled={!isUnlocked}
                 />
               </div>
-              {capsLockState.keyPosition > 0 && (
-                <div className="text-sm text-base-content/50">
-                  {t("lighting.capsLock.keyPosition", { pos: capsLockState.keyPosition })}
-                </div>
-              )}
             </div>
+            {capsLockState.keyPosition > 0 && (
+              <div className="text-sm text-base-content/50">
+                {t("lighting.capsLock.keyPosition", { pos: capsLockState.keyPosition })}
+              </div>
+            )}
           </>
         )}
 
