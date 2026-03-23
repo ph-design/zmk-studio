@@ -136,7 +136,7 @@
       "clear": "清除"
     },
     "capsLock": {
-      "title": "CapsLock 指示灯",
+      "title": "大写指示灯",
       "enabled": "启用",
       "onColor": "亮灯颜色",
       "offColor": "灭灯颜色",
