@@ -75,9 +75,11 @@ function scalePosition(
 export const PhysicalLayout = ({
   positions,
   selectedPosition,
+  selectedPositions,
   oneU = 48,
+  hoverZoom,
+  zoom,
   onPositionClicked,
-  ...props
 }: PhysicalLayoutProps) => {
   const ref = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -90,7 +92,7 @@ export const PhysicalLayout = ({
     if (!parent) return;
 
     const calculateScale = () => {
-      if (props.zoom === "auto") {
+      if (zoom === "auto") {
         const padding = Math.min(window.innerWidth, window.innerHeight) * 0.05; // Padding when in auto mode
         const newScale = Math.min(
           parent.clientWidth / (element.clientWidth + 2 * padding),
@@ -98,7 +100,7 @@ export const PhysicalLayout = ({
         );
         setScale(newScale);
       } else {
-        setScale(props.zoom || 1);
+        setScale(zoom || 1);
       }
     };
 
@@ -114,7 +116,7 @@ export const PhysicalLayout = ({
     return () => {
       resizeObserver.disconnect();
     };
-  }, [props.zoom]);
+  }, [zoom]);
 
   // TODO: Add a bit of padding for rotation when supported
   let rightMost = positions
@@ -125,8 +127,8 @@ export const PhysicalLayout = ({
     .reduce((a, b) => Math.max(a, b), 0);
 
   const positionItems = positions.map((p, idx) => {
-    const isSelected = props.selectedPositions
-      ? props.selectedPositions.has(idx)
+    const isSelected = selectedPositions
+      ? selectedPositions.has(idx)
       : idx === selectedPosition;
     return (
       <div key={p.id} className="absolute" style={scalePosition(p, oneU)}>
@@ -136,7 +138,7 @@ export const PhysicalLayout = ({
         >
           <Key
             oneU={oneU}
-            hoverZoom={props.hoverZoom}
+            hoverZoom={hoverZoom}
             selected={isSelected}
             {...p}
           />
@@ -158,7 +160,6 @@ export const PhysicalLayout = ({
         willChange: "transform",
       }}
       ref={ref}
-      {...props}
     >
       {positionItems}
     </div>
