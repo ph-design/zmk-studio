@@ -5,7 +5,7 @@ import type { RpcTransport } from "@zmkfirmware/zmk-studio-ts-client/transport/i
 import { UserCancelledError } from "@zmkfirmware/zmk-studio-ts-client/transport/errors";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import type { AvailableDevice } from "./tauri/index";
-import { AlertCircle, Bluetooth, Cable, RefreshCw, Languages, Download, X, LoaderCircle, CheckCircle2, LockKeyhole } from "lucide-react";
+import { AlertCircle, Bluetooth, Cable, RefreshCw, Languages, Download, X, LoaderCircle, LockKeyhole } from "lucide-react";
 import {
   Key,
   ListBox,
@@ -304,18 +304,6 @@ function ConnectingStep({
         {t("welcome.cancelConnection")}
       </Button>
     </FlowStep>
-  );
-}
-
-function ConnectedStep({ deviceName }: { deviceName?: string }) {
-  const { t } = useTranslation();
-
-  return (
-    <FlowStep
-      icon={<CheckCircle2 className="size-7" />}
-      title={t("welcome.connectedTitle")}
-      body={t("welcome.connectedDescription", { name: deviceName || t("welcome.connectedDeviceFallback") })}
-    />
   );
 }
 
@@ -683,7 +671,6 @@ export const ConnectModal = ({
   onConnectionError,
   connectionPhase = "idle",
   connectionProgress,
-  connectedDeviceName,
   lockState,
   onCancelConnection,
   footer,
@@ -704,15 +691,22 @@ export const ConnectModal = ({
   }, []);
 
   const haveTransports = useMemo(() => transports.length > 0, [transports]);
-  const isUnlocked = lockState === LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED;
   const isLocked = lockState === LockState.ZMK_STUDIO_CORE_LOCK_STATE_LOCKED;
   const showConnecting = connectionPhase === "connecting";
   const showInitializing = connectionPhase === "initializing";
   const showConnected = connectionPhase === "connected";
   const showCheckingLock = showConnected && lockState === undefined;
   const showUnlock = showConnected && isLocked;
-  const showSuccess = showConnected && isUnlocked;
-  const showConnectOptions = !showConnecting && !showInitializing && !showCheckingLock && !showUnlock && !showSuccess;
+  const liveView = showConnecting || showInitializing || showCheckingLock
+    ? "progress"
+    : showUnlock
+      ? "unlock"
+      : "options";
+  const lastFlowView = useRef<typeof liveView>("options");
+  if (liveView !== "options") {
+    lastFlowView.current = liveView;
+  }
+  const displayView = !open && liveView === "options" ? lastFlowView.current : liveView;
   const isDesktopClient = !!window.__TAURI_INTERNALS__;
 
   return (
@@ -762,12 +756,11 @@ export const ConnectModal = ({
           onDismiss={() => onConnectionError?.(undefined)}
         />
         <div className="space-y-4">
-          {(showConnecting || showInitializing || showCheckingLock) && (
+          {displayView === "progress" && (
             <ConnectingStep progress={connectionProgress} onCancel={onCancelConnection} />
           )}
-          {showUnlock && <UnlockStep />}
-          {showSuccess && <ConnectedStep deviceName={connectedDeviceName} />}
-          {showConnectOptions && (
+          {displayView === "unlock" && <UnlockStep />}
+          {displayView === "options" && (
             <>
               {haveTransports
                 ? <ConnectOptions transports={transports} onTransportCreated={onTransportCreated} onConnectionError={onConnectionError} open={open} />

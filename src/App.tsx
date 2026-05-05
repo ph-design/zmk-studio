@@ -169,6 +169,10 @@ async function connect(
     valueAfter(undefined, 1000),
   ]);
 
+  if (signal.aborted) {
+    return false;
+  }
+
   if (!details) {
     setConnectionError(i18n.t("errors.failedToConnect"));
     return false;
@@ -217,12 +221,17 @@ function App() {
   const [connectionProgress, setConnectionProgress] = useState<ConnectionProgress | undefined>();
   const [keyboardReady, setKeyboardReady] = useState(false);
   const connectionPhaseRef = useRef(connectionPhase);
+  const connectionAbortRef = useRef(connectionAbort);
 
   const [lockState, setLockState] = useState<LockState | undefined>(undefined);
 
   useEffect(() => {
     connectionPhaseRef.current = connectionPhase;
   }, [connectionPhase]);
+
+  useEffect(() => {
+    connectionAbortRef.current = connectionAbort;
+  }, [connectionAbort]);
 
   useSub("rpc_notification.core.lockStateChanged", (ls) => {
     setLockState(ls);
@@ -245,7 +254,7 @@ function App() {
       setLockState(undefined);
       setConnectionProgress((progress) => {
         if (progress) {
-          return { labelKey: "welcome.connectProgressLockState", percent: Math.max(progress?.percent ?? 0, 58) };
+          return { labelKey: "welcome.connectProgressLockState", percent: Math.max(progress.percent, 58) };
         }
 
         return progress;
@@ -274,8 +283,9 @@ function App() {
   useEffect(() => {
     if (!conn.conn) {
       setKeyboardReady(false);
-      if (connectionPhase === "connected") {
+      if (connectionPhase !== "idle") {
         setConnectionPhase("idle");
+        setConnectionProgress(undefined);
       }
       return;
     }
@@ -299,22 +309,8 @@ function App() {
     }
 
     if (connectionPhase === "initializing" && keyboardReady) {
-      setConnectionPhase("connected");
-      setConnectionProgress({ labelKey: "welcome.connectProgressReady", percent: 100 });
-      return;
-    }
-
-    if (
-      connectionPhase === "connected" &&
-      lockState === LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED &&
-      keyboardReady
-    ) {
-      const closeTimer = window.setTimeout(() => {
-        setConnectionPhase("idle");
-        setConnectionProgress(undefined);
-      }, 1200);
-
-      return () => window.clearTimeout(closeTimer);
+      setConnectionPhase("idle");
+      setConnectionProgress(undefined);
     }
   }, [conn.conn, connectionPhase, keyboardReady, lockState]);
 
@@ -375,15 +371,27 @@ function App() {
 
   const disconnect = useCallback(() => {
     async function doDisconnect() {
-      if (!conn.conn) {
+      const currentConn = conn.conn;
+      if (!currentConn) {
         return;
       }
 
-      await conn.conn.request_writable.close();
-      connectionAbort.abort("User disconnected");
-      setConnectionAbort(new AbortController());
+      connectionAbortRef.current.abort("User disconnected");
+      const nextAbort = new AbortController();
+      connectionAbortRef.current = nextAbort;
+      setConnectionAbort(nextAbort);
+      setConn({ conn: null });
+      setConnectedDeviceName(undefined);
+      setKeyboardReady(false);
+      setLockState(undefined);
       setConnectionPhase("idle");
       setConnectionProgress(undefined);
+
+      try {
+        await currentConn.request_writable.close();
+      } catch (e) {
+        console.error("Failed to close RPC writable stream", e);
+      }
     }
 
     doDisconnect();
@@ -392,6 +400,7 @@ function App() {
   const onConnect = useCallback(
     (t: RpcTransport) => {
       const ac = new AbortController();
+      connectionAbortRef.current = ac;
       setConnectionAbort(ac);
       setConnectionError(undefined);
       setKeyboardReady(false);
@@ -400,12 +409,20 @@ function App() {
       setConnectionProgress({ labelKey: "welcome.connectProgressTransport", percent: 10 });
       connect(t, setConn, setConnectedDeviceName, ac.signal, setConnectionError, setConnectionProgress)
         .then((connected) => {
+          if (ac.signal.aborted) {
+            return;
+          }
+
           setConnectionPhase(connected ? "connected" : "idle");
           if (!connected) {
             setConnectionProgress(undefined);
           }
         })
         .catch((e) => {
+          if (ac.signal.aborted) {
+            return;
+          }
+
           console.error(e);
           setConnectionPhase("idle");
           setConnectionProgress(undefined);
@@ -430,12 +447,17 @@ function App() {
   );
 
   const cancelConnection = useCallback(() => {
-    connectionAbort.abort("User cancelled connection");
-    setConnectionAbort(new AbortController());
+    connectionAbortRef.current.abort("User cancelled connection");
+    const nextAbort = new AbortController();
+    connectionAbortRef.current = nextAbort;
+    setConnectionAbort(nextAbort);
+    setConn({ conn: null });
+    setConnectedDeviceName(undefined);
     setKeyboardReady(false);
+    setLockState(undefined);
     setConnectionPhase("idle");
     setConnectionProgress(undefined);
-  }, [connectionAbort]);
+  }, []);
 
   const connectModalOpen =
     !conn.conn ||
