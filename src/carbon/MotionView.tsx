@@ -1,23 +1,27 @@
 import { useEffect, useRef, useState } from "react";
-import { Hand, Waves, ShieldCheck, Lock, Unlock, Smartphone } from "lucide-react";
+import { Hand, Waves, Footprints, Moon, Smartphone, Sunrise } from "lucide-react";
 
 import type { BehaviorBinding, Layer } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import type { GetBehaviorDetailsResponse } from "@zmkfirmware/zmk-studio-ts-client/behaviors";
 
 import type { CarbonTheme } from "./theme";
-import { ContentSwitcher, Loading, NotSupportedHint, Toggle } from "./CarbonChrome";
+import { Loading, NotSupportedHint, Toggle } from "./CarbonChrome";
 import { BehaviorBindingPicker } from "../behaviors/BehaviorBindingPicker";
 import { summarizeBinding } from "../combos/comboUtils";
 import {
-  LockScope,
   Orientation,
-  TapKind,
-  type LockConfig,
+  TAP_SLOTS,
+  ALL_LAYERS_MASK,
+  withSlotBinding,
+  type CarryConfig,
+  type MotionLiveState,
+  type StillWakeConfig,
   type TapConfig,
+  type TapSlot,
 } from "../motion/motionRpc";
 import type { MotionModel } from "../motion/useMotion";
 
-type Section = "tap" | "lock";
+type Section = "carry" | "stillWake" | "tap";
 
 interface MotionViewProps {
   motion: MotionModel;
@@ -28,38 +32,36 @@ interface MotionViewProps {
   t: (k: string, d: string) => string;
 }
 
-/*
- * IMU panel (PH60SCV2EVO / LIS2DH12): case-tap actions and the walk-detect key
- * lock. Same three-part shape as the lighting panel — capability rail, live
- * canvas, config drawer — because both are "pick a feature, watch it, tune it".
- *
- * The live meter is the point of the middle pane: thresholds are in raw sensor
- * counts, so the only honest way to pick one is to watch the signal while
- * moving the keyboard.
- */
+// IMU panel
 export function MotionView({ motion, behaviors, behaviorList, layers, th, t }: MotionViewProps) {
-  const { capabilities, tapConfig, lockConfig } = motion;
+  const { capabilities, tapConfig, carryConfig, stillWakeConfig } = motion;
 
   const allSections: { id: Section; label: string; icon: React.ReactNode; has: boolean }[] = [
+    {
+      id: "carry",
+      label: t("motion.carry.title", "Carry sleep"),
+      icon: <Footprints size={16} />,
+      has: !!capabilities?.supportsCarry && !!carryConfig,
+    },
+    {
+      id: "stillWake",
+      label: t("motion.stillWake.title", "Settle wake"),
+      icon: <Sunrise size={16} />,
+      has: !!capabilities?.supportsStillWake && !!stillWakeConfig,
+    },
     {
       id: "tap",
       label: t("motion.tap.title", "Case tap"),
       icon: <Hand size={16} />,
       has: !!capabilities?.supportsTap && !!tapConfig,
     },
-    {
-      id: "lock",
-      label: t("motion.lock.title", "Motion lock"),
-      icon: <ShieldCheck size={16} />,
-      has: !!capabilities?.supportsLock && !!lockConfig,
-    },
   ];
   const sections = allSections.filter((s) => s.has);
 
-  const [section, setSection] = useState<Section>("tap");
+  const [section, setSection] = useState<Section>("carry");
   const current = sections.some((s) => s.id === section) ? section : sections[0]?.id;
 
-  const [editingBinding, setEditingBinding] = useState<BehaviorBinding | null>(null);
+  const [editing, setEditing] = useState<{ slot: TapSlot; binding: BehaviorBinding } | null>(null);
 
   // Live push stays off unless this view is mounted — it's per-100ms traffic.
   const { setLiveWanted } = motion;
@@ -93,7 +95,7 @@ export function MotionView({ motion, behaviors, behaviorList, layers, th, t }: M
           {sections.map((s) => {
             const active = s.id === current;
             return (
-              <button key={s.id} onClick={() => { setSection(s.id); setEditingBinding(null); }}
+              <button key={s.id} onClick={() => { setSection(s.id); setEditing(null); }}
                 style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", minHeight: 44, padding: "0 14px", cursor: "pointer", textAlign: "left", background: active ? th.selectedLayer : "transparent", border: "none", borderLeft: `3px solid ${active ? th.interactive : "transparent"}`, fontFamily: "var(--font-sans)" }}>
                 <span style={{ color: active ? th.interactive : th.iconSecondary, display: "flex", flexShrink: 0 }}>{s.icon}</span>
                 <span style={{ fontSize: 14, fontWeight: active ? 500 : 400, color: active ? th.textPrimary : th.textSecondary }}>{s.label}</span>
@@ -101,14 +103,8 @@ export function MotionView({ motion, behaviors, behaviorList, layers, th, t }: M
             );
           })}
         </div>
-        {/*
-          Lock state lives in the rail, not above the meter. It's a status readout
-          that applies to both sections, the rail has room going spare, and every
-          pixel it isn't spending in the content column is one the settings list
-          gets — that list is a single column now and needs the height far more
-          than a two-line status card does.
-        */}
-        <LockStateCard th={th} t={t} live={motion.live} />
+        {/* Carry status is shared by both sections, so it lives in the rail. */}
+        <CarryStateCard th={th} t={t} live={motion.live} />
         <div style={{ padding: "10px 14px", borderTop: `1px solid ${th.border}`, fontSize: 11, color: th.textHelper, fontFamily: "var(--font-mono)" }}>
           {capabilities.sensor}
         </div>
@@ -116,40 +112,42 @@ export function MotionView({ motion, behaviors, behaviorList, layers, th, t }: M
 
       {/* Live canvas + config drawer */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, minWidth: 0 }}>
-        {/* The readout is the reason this panel exists — thresholds are raw sensor
-            counts, so it's the only thing that makes a number mean anything. It
-            gets the full width and stays pinned while the settings scroll. */}
+        {/* The meter gets full width and stays pinned while settings scroll. */}
         <div style={{ flexShrink: 0, padding: "14px 24px 14px" }}>
           <LiveMeter
             th={th}
             t={t}
             motion={motion}
-            section={current ?? "tap"}
+            section={current ?? "carry"}
           />
         </div>
 
         <div style={{ flex: 1, minHeight: 240, borderTop: `1px solid ${th.border}`, background: th.layer1, display: "flex", flexDirection: "column" }}>
-          {editingBinding && tapConfig ? (
+          {editing && tapConfig ? (
             <div style={{ display: "flex", flexDirection: "column", minHeight: 0, height: "100%" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, height: 40, padding: "0 16px", borderBottom: `1px solid ${th.border}`, flexShrink: 0 }}>
                 <span style={{ flex: 1, fontSize: 13, color: th.textPrimary, fontWeight: 500 }}>
-                  {t("motion.tap.bindingTitle", "Action triggered by a case tap")}
+                  {t("motion.tap.bindingTitle", "Action triggered by this tap slot")}
                 </span>
-                <button onClick={() => setEditingBinding(null)}
+                <button onClick={() => setEditing(null)}
                   style={{ padding: "5px 12px", fontSize: 12, background: "transparent", color: th.textSecondary, border: `1px solid ${th.border}`, cursor: "pointer", fontFamily: "var(--font-sans)" }}>
                   {t("common.cancel", "Cancel")}
                 </button>
-                <button onClick={() => { motion.applyTapConfig({ ...tapConfig, binding: editingBinding }); setEditingBinding(null); }}
+                <button onClick={() => { motion.applyTapConfig(withSlotBinding(tapConfig, editing.slot, undefined)); setEditing(null); }}
+                  style={{ padding: "5px 12px", fontSize: 12, background: "transparent", color: th.textSecondary, border: `1px solid ${th.border}`, cursor: "pointer", fontFamily: "var(--font-sans)" }}>
+                  {t("motion.tap.clearBinding", "Clear")}
+                </button>
+                <button onClick={() => { motion.applyTapConfig(withSlotBinding(tapConfig, editing.slot, editing.binding)); setEditing(null); }}
                   style={{ padding: "5px 12px", fontSize: 12, background: th.interactive, color: "#fff", border: "none", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
                   {t("combos.confirm", "Confirm")}
                 </button>
               </div>
               <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-4 py-3">
                 <BehaviorBindingPicker
-                  binding={editingBinding}
+                  binding={editing.binding}
                   behaviors={behaviorList}
                   layers={layers}
-                  onBindingChanged={setEditingBinding}
+                  onBindingChanged={(b) => setEditing({ ...editing, binding: b })}
                 />
               </div>
             </div>
@@ -157,18 +155,29 @@ export function MotionView({ motion, behaviors, behaviorList, layers, th, t }: M
             <TapSettings
               th={th} t={t}
               config={tapConfig}
+              behaviors={behaviors}
+              layers={layers}
               thresholdMax={capabilities.thresholdMax}
-              supportsDoubleTap={capabilities.supportsDoubleTap}
-              bindingLabel={summarizeBinding(tapConfig.binding, behaviors)}
-              onEditBinding={() => setEditingBinding(tapConfig.binding ?? { behaviorId: -1, param1: 0, param2: 0 })}
+              onEditSlot={(slot) =>
+                setEditing({
+                  slot,
+                  binding: tapConfig[slot] ?? { behaviorId: -1, param1: 0, param2: 0 },
+                })
+              }
               onChange={(c) => motion.applyTapConfig(c)}
             />
-          ) : current === "lock" && lockConfig ? (
-            <LockSettings
+          ) : current === "carry" && carryConfig ? (
+            <CarrySettings
               th={th} t={t}
-              config={lockConfig}
+              config={carryConfig}
               thresholdMax={capabilities.thresholdMax}
-              onChange={(c) => motion.applyLockConfig(c)}
+              onChange={(c) => motion.applyCarryConfig(c)}
+            />
+          ) : current === "stillWake" && stillWakeConfig ? (
+            <StillWakeSettings
+              th={th} t={t}
+              config={stillWakeConfig}
+              onChange={(c) => motion.applyStillWakeConfig(c)}
             />
           ) : null}
         </div>
@@ -179,36 +188,37 @@ export function MotionView({ motion, behaviors, behaviorList, layers, th, t }: M
 
 // ─── Live state ────────────────────────────────────────────────────────────────
 
-/** Lock state + orientation, in the rail so it's visible from either section. */
-function LockStateCard({ th, t, live }: {
+/** Carry status + orientation, visible from either section. */
+function CarryStateCard({ th, t, live }: {
   th: CarbonTheme;
   t: (k: string, d: string) => string;
-  live: MotionModel["live"];
+  live: MotionLiveState;
 }) {
   const orientationLabel: Record<Orientation, string> = {
-    [Orientation.UNKNOWN]: t("motion.orientation.unknown", "Unknown"),
-    [Orientation.FLAT_UP]: t("motion.orientation.flatUp", "Flat, face up"),
-    [Orientation.FLAT_DOWN]: t("motion.orientation.flatDown", "Upside down"),
-    [Orientation.TILTED]: t("motion.orientation.tilted", "Tilted / moving"),
+    [Orientation.ORIENTATION_UNKNOWN]: t("motion.orientation.unknown", "Unknown"),
+    [Orientation.ORIENTATION_FLAT_UP]: t("motion.orientation.flatUp", "Flat, face up"),
+    [Orientation.ORIENTATION_FLAT_DOWN]: t("motion.orientation.flatDown", "Upside down"),
+    [Orientation.ORIENTATION_TILTED]: t("motion.orientation.tilted", "Tilted / moving"),
+    [Orientation.UNRECOGNIZED]: t("motion.orientation.unknown", "Unknown"),
   };
-  const tone = live.locked ? th.warning : th.success;
+  const tone = live.carryActive ? th.warning : th.success;
 
   return (
     <div style={{ flexShrink: 0, padding: "12px 14px", borderTop: `1px solid ${th.border}`, borderLeft: `3px solid ${tone}` }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ color: tone, display: "flex", flexShrink: 0 }}>
-          {live.locked ? <Lock size={16} /> : <Unlock size={16} />}
+          {live.carryActive ? <Moon size={16} /> : <Footprints size={16} />}
         </span>
         <span style={{ fontSize: 14, fontWeight: 600, color: th.textPrimary }}>
-          {live.locked
-            ? t("motion.state.locked", "Keys locked")
-            : t("motion.state.unlocked", "Keys active")}
+          {live.carryActive
+            ? t("motion.carry.active", "Carrying — going to sleep")
+            : t("motion.carry.idle", "Settled — awake")}
         </span>
       </div>
       <div style={{ fontSize: 12, color: th.textHelper, lineHeight: 1.45, marginTop: 4 }}>
-        {live.locked
-          ? t("motion.state.lockedHint", "Sustained movement detected — unlocks once set down on a flat surface")
-          : t("motion.state.unlockedHint", "Still, orientation normal")}
+        {live.carryActive
+          ? t("motion.carry.activeHint", "Still moving — the keyboard will sleep now; set it down to wake it")
+          : t("motion.carry.idleHint", "Resting — carry it around and it will sleep on its own")}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: th.textSecondary, marginTop: 8 }}>
         <Smartphone size={14} style={{ color: th.iconSecondary, flexShrink: 0 }} />
@@ -225,15 +235,8 @@ const PEAK_HOLD_MS = 900;
 /** Full-scale fall time once the hold expires. */
 const PEAK_FALL_MS = 4000;
 
-/*
- * Peak hold.
- *
- * The number that matters when calibrating a tap threshold is the transient, and
- * a bar that tracks the signal live has already dropped back before you can read
- * it. So the peak is pushed up the instant the signal exceeds it, held long
- * enough to read, then bled away — and never below the live value, so it reads as
- * the bar carrying the marker rather than two independent things.
- */
+// The peak is pushed up the instant the signal exceeds it, held long enough to
+// read, then bled away — never below the live value.
 function usePeakHold(value: number, max: number, resetKey: unknown): number {
   const latest = useRef(value);
   latest.current = value;
@@ -272,27 +275,21 @@ function LiveMeter({ th, t, motion, section }: {
   motion: MotionModel;
   section: Section;
 }) {
-  const { live, capabilities, tapConfig, lockConfig } = motion;
+  const { live, capabilities, tapConfig, carryConfig } = motion;
   const max = capabilities?.thresholdMax ?? 127;
   const pct = (v: number) => `${Math.min(100, Math.max(0, (v / max) * 100))}%`;
   const peak = usePeakHold(live.magnitude, max, section);
 
-  // Markers make the raw counts legible: you can see how far the current signal
-  // sits from the threshold that would actually fire.
+  // Markers make raw counts legible: distance from the threshold that fires.
   const markers =
     section === "tap"
       ? tapConfig
         ? [{ value: tapConfig.threshold, label: t("motion.tap.threshold", "Trigger threshold"), color: th.interactive }]
         : []
-      : lockConfig
-        ? [
-            { value: lockConfig.motionThreshold, label: t("motion.lock.motionThreshold", "Lock threshold"), color: th.warning },
-            { value: lockConfig.stillThreshold, label: t("motion.lock.stillThreshold", "Still threshold"), color: th.success },
-          ]
+      : section === "carry" && carryConfig
+        ? [{ value: carryConfig.motionThreshold, label: t("motion.carry.motionThreshold", "Motion threshold"), color: th.warning }]
         : [];
 
-  /* Full width — thresholds are raw counts, so this bar is the only thing that
-     makes one mean anything, and it was previously boxed into half a panel. */
   return (
     <div style={{ width: "100%" }}>
       <div>
@@ -305,8 +302,7 @@ function LiveMeter({ th, t, motion, section }: {
           </span>
         </div>
         <div style={{ position: "relative", height: 32, background: th.fieldBg, border: `1px solid ${th.border}` }}>
-          {/* Trail from the live value up to the peak, so the marker reads as
-              having been pushed there rather than floating free. */}
+          {/* Trail up to the peak marker. */}
           <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: pct(peak), background: th.interactive, opacity: 0.22, transition: "width 100ms linear" }} />
           <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: pct(live.magnitude), background: th.interactive, opacity: 0.75, transition: "width 100ms linear" }} />
           <div style={{ position: "absolute", left: pct(peak), top: -3, bottom: -3, width: 2, marginLeft: -2, background: th.textPrimary, transition: "left 100ms linear" }} />
@@ -314,9 +310,8 @@ function LiveMeter({ th, t, motion, section }: {
             <div key={m.label} style={{ position: "absolute", left: pct(m.value), top: -4, bottom: -4, width: 2, background: m.color }} />
           ))}
         </div>
-        {/* Legend and how-to-read side by side: at this width there's room, and
-            the height it saves goes to the settings list below, which needs it
-            more than this does. */}
+        {/* Legend and how-to-read side by side: the saved height goes to the
+            settings list below. */}
         <div style={{ display: "flex", alignItems: "flex-start", gap: 24, marginTop: 8 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>
             <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: th.textHelper }}>
@@ -333,7 +328,9 @@ function LiveMeter({ th, t, motion, section }: {
           <div style={{ flex: 1, minWidth: 0, fontSize: 12, color: th.textHelper, lineHeight: 1.5 }}>
             {section === "tap"
               ? t("motion.tap.calibrateHint", "Tap the case and read the peak marker it leaves behind, then set the threshold just below it — too low and typing vibration will trigger it.")
-              : t("motion.lock.calibrateHint", "Pick the keyboard up and walk a few steps to see the range it settles into; take the lock threshold from the bottom of that range and the still threshold from the noise floor on a desk.")}
+              : section === "carry"
+                ? t("motion.carry.calibrateHint", "Pick the keyboard up and walk a few steps to see the range the signal settles into, then set the motion threshold from the bottom of that range.")
+                : t("motion.stillWake.meterHint", "The settle window only watches whether motion has fallen silent, so no threshold marker applies here.")}
           </div>
         </div>
       </div>
@@ -343,19 +340,8 @@ function LiveMeter({ th, t, motion, section }: {
 
 // ─── Settings forms ────────────────────────────────────────────────────────────
 
-/*
- * Settings list, same shape as the Device page's SettingsBlock: one column,
- * label → optional helper → control, a rule between entries.
- *
- * The two things that made this look slapdash before were controls each bringing
- * their own height (a 22px toggle beside a 35px segmented control beside a native
- * slider), and labels sitting in a fixed column so nothing shared a baseline. Both
- * are fixed by stacking and by pinning the control box to FIELD_H.
- *
- * `value` goes on the label line rather than beside the control, which is where
- * Carbon's slider puts its number input too — it keeps a slider entry one line
- * shorter and means every value in the list is right-aligned to the same edge.
- */
+// One column: label → helper → control. Values sit on the label line so every
+// number right-aligns to one edge.
 const FIELD_H = 40; // Carbon field height, size md
 const LIST_MAX_W = 680; // a slider stops being readable much past this
 
@@ -397,8 +383,7 @@ function Field({ th, label, tag, value, hint, height = FIELD_H, children }: {
   );
 }
 
-/** Carbon form section heading: 14px semibold. The entries' own rules carry the
- *  structure, so this doesn't add one of its own. */
+// Carbon section heading; the entries' rules carry the structure.
 function GroupHeading({ th, children }: { th: CarbonTheme; children: React.ReactNode }) {
   return (
     <div style={{ paddingTop: 20, paddingBottom: 2 }}>
@@ -407,11 +392,7 @@ function GroupHeading({ th, children }: { th: CarbonTheme; children: React.React
   );
 }
 
-/*
- * Fixed enable bar at the top of the drawer, matching the lighting panel's top
- * bar. Keeping it out of the scroll area means the rows below get the full
- * remaining height.
- */
+// Fixed above the scroll area, matching the lighting panel's top bar.
 function EnableBar({ th, title, desc, enabled, onChange }: {
   th: CarbonTheme;
   title: string;
@@ -430,33 +411,43 @@ function EnableBar({ th, title, desc, enabled, onChange }: {
   );
 }
 
-/**
- * Full-width track with Carbon's min/max end labels. The current value isn't
- * repeated here — it's on the entry's label line, where every value in the list
- * lines up to one right edge.
- */
-function Slider({ th, value, min, max, step, onChange, unit }: {
+// Full-width track with Carbon's end labels. Dragging previews locally; the
+// value commits on release so a drag isn't one RPC per pixel.
+function Slider({ th, value, min, max, step, onCommit, unit }: {
   th: CarbonTheme;
   value: number;
   min: number;
   max: number;
   step?: number;
-  onChange: (v: number) => void;
+  onCommit: (v: number) => void;
   unit?: string;
 }) {
   const end: React.CSSProperties = { fontSize: 12, fontFamily: "var(--font-mono)", color: th.textHelper, flexShrink: 0 };
+  const [draft, setDraft] = useState(value);
+  useEffect(() => setDraft(value), [value]);
+  const commit = () => onCommit(draft);
   return (
     <>
       <span style={end}>{min}{unit ?? ""}</span>
-      <input type="range" min={min} max={max} step={step ?? 1} value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="carbon-slider" style={{ flex: 1, minWidth: 0 }} />
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step ?? 1}
+        value={draft}
+        onChange={(e) => setDraft(Number(e.target.value))}
+        onPointerUp={commit}
+        onKeyUp={commit}
+        onBlur={commit}
+        className="carbon-slider"
+        style={{ flex: 1, minWidth: 0 }}
+      />
       <span style={end}>{max}{unit ?? ""}</span>
     </>
   );
 }
 
-/** Field-shaped read-only value with a trailing action, sized like every other control. */
+// Read-only value with a trailing action, sized like every other control.
 function ValueField({ th, value, actionLabel, onAction }: {
   th: CarbonTheme;
   value: string;
@@ -476,14 +467,54 @@ function ValueField({ th, value, actionLabel, onAction }: {
   );
 }
 
-function TapSettings({ th, t, config, thresholdMax, supportsDoubleTap, bindingLabel, onEditBinding, onChange }: {
+// No chip selected = layerMask 0, which the firmware treats as "every layer".
+function LayerChips({ th, t, layers, mask, onChange }: {
+  th: CarbonTheme;
+  t: (k: string, d: string) => string;
+  layers: Layer[];
+  mask: number;
+  onChange: (m: number) => void;
+}) {
+  const chip = (on: boolean): React.CSSProperties => ({
+    padding: "4px 12px", fontSize: 12, cursor: "pointer", whiteSpace: "nowrap",
+    background: on ? th.selectedLayer : "transparent",
+    color: on ? th.textPrimary : th.textSecondary,
+    border: `1px solid ${on ? th.interactive : th.border}`,
+  });
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", minHeight: 32 }}>
+      {layers.map((layer, i) => {
+        const on = mask === ALL_LAYERS_MASK || (mask & (1 << i)) !== 0;
+        return (
+          <button key={i} style={chip(mask !== ALL_LAYERS_MASK && on)}
+            onClick={() => {
+              if (mask === ALL_LAYERS_MASK) {
+                onChange(1 << i);
+              } else {
+                onChange(on ? mask & ~(1 << i) : mask | (1 << i));
+              }
+            }}>
+            {layer.name ?? `Layer ${i}`}
+          </button>
+        );
+      })}
+      <span style={{ fontSize: 11, color: th.textHelper }}>
+        {mask === ALL_LAYERS_MASK
+          ? t("motion.tap.allLayers", "All layers")
+          : t("motion.tap.allLayersOff", "Leave all off for every layer")}
+      </span>
+    </div>
+  );
+}
+
+function TapSettings({ th, t, config, behaviors, layers, thresholdMax, onEditSlot, onChange }: {
   th: CarbonTheme;
   t: (k: string, d: string) => string;
   config: TapConfig;
+  behaviors: Record<number, GetBehaviorDetailsResponse>;
+  layers: Layer[];
   thresholdMax: number;
-  supportsDoubleTap: boolean;
-  bindingLabel: string;
-  onEditBinding: () => void;
+  onEditSlot: (slot: TapSlot) => void;
   onChange: (c: TapConfig) => void;
 }) {
   const set = (patch: Partial<TapConfig>) => onChange({ ...config, ...patch });
@@ -493,118 +524,120 @@ function TapSettings({ th, t, config, thresholdMax, supportsDoubleTap, bindingLa
     <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
       <EnableBar th={th}
         title={t("motion.tap.title", "Case tap")}
-        desc={t("motion.tap.desc", "Tap the case to trigger an action, recognised by the sensor's click interrupt")}
+        desc={t("motion.tap.desc", "Tap the case to trigger actions, one binding per side and tap style")}
         enabled={config.enabled}
         onChange={(v) => set({ enabled: v })} />
 
       <div className="custom-scrollbar"
         style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "4px 24px 24px", opacity: dim, pointerEvents: config.enabled ? "auto" : "none" }}>
         <SettingsList>
-          <Field th={th} label={t("motion.tap.action", "Action")}>
-            <ValueField th={th} value={bindingLabel}
-              actionLabel={t("common.change", "Change")} onAction={onEditBinding} />
-          </Field>
-
-          {supportsDoubleTap && (
-            <Field th={th} label={t("motion.tap.kind", "Tap style")}>
-              <ContentSwitcher th={th}
-                label={t("motion.tap.kind", "Tap style")}
-                value={String(config.kind)}
-                opts={[
-                  { id: String(TapKind.SINGLE), label: t("motion.tap.single", "Single") },
-                  { id: String(TapKind.DOUBLE), label: t("motion.tap.double", "Double") },
-                ]}
-                onChange={(v) => set({ kind: Number(v) as TapKind })} />
+          <GroupHeading th={th}>{t("motion.tap.bindingsGroup", "Bindings")}</GroupHeading>
+          {TAP_SLOTS.map(({ slot, side, taps }) => (
+            <Field key={slot} th={th}
+              label={t(`motion.tap.${side}${taps === 1 ? "Single" : "Double"}`,
+                `${side === "left" ? "Left" : "Right"} ${taps === 1 ? "single" : "double"} tap`)}
+              tag={taps === 1 ? "SCLICK" : "DCLICK"}>
+              <ValueField th={th}
+                value={config[slot]
+                  ? summarizeBinding(config[slot] as BehaviorBinding, behaviors)
+                  : t("motion.tap.unbound", "Not set")}
+                actionLabel={t("common.change", "Change")}
+                onAction={() => onEditSlot(slot)} />
             </Field>
-          )}
+          ))}
 
+          <GroupHeading th={th}>{t("motion.tap.timingGroup", "Detection")}</GroupHeading>
           <Field th={th} label={t("motion.tap.threshold", "Trigger threshold")} tag="CLICK_THS"
             value={String(config.threshold)} height={24}>
-            <Slider th={th} value={config.threshold} min={1} max={thresholdMax} onChange={(v) => set({ threshold: v })} />
+            <Slider th={th} value={config.threshold} min={1} max={thresholdMax} onCommit={(v) => set({ threshold: v })} />
           </Field>
           <Field th={th} label={t("motion.tap.timeLimit", "Max tap length")} tag="TIME_LIMIT"
             value={`${config.timeLimitMs} ms`} height={24}>
-            <Slider th={th} value={config.timeLimitMs} min={10} max={200} step={5} onChange={(v) => set({ timeLimitMs: v })} />
+            <Slider th={th} value={config.timeLimitMs} min={10} max={200} step={5} onCommit={(v) => set({ timeLimitMs: v })} />
           </Field>
           <Field th={th} label={t("motion.tap.latency", "Dead time after trigger")} tag="TIME_LATENCY"
             value={`${config.latencyMs} ms`} height={24}>
-            <Slider th={th} value={config.latencyMs} min={10} max={400} step={10} onChange={(v) => set({ latencyMs: v })} />
+            <Slider th={th} value={config.latencyMs} min={10} max={400} step={10} onCommit={(v) => set({ latencyMs: v })} />
           </Field>
-          {config.kind === TapKind.DOUBLE && (
-            <Field th={th} label={t("motion.tap.window", "Second-tap window")} tag="TIME_WINDOW"
-              value={`${config.windowMs} ms`} height={24}>
-              <Slider th={th} value={config.windowMs} min={50} max={800} step={10} onChange={(v) => set({ windowMs: v })} />
-            </Field>
-          )}
+          <Field th={th} label={t("motion.tap.window", "Second-tap window")} tag="TIME_WINDOW"
+            value={`${config.windowMs} ms`} height={24}
+            hint={t("motion.tap.windowHint", "When a single and a double share a side, the single fires this long late so the double can win")}>
+            <Slider th={th} value={config.windowMs} min={50} max={800} step={10} onCommit={(v) => set({ windowMs: v })} />
+          </Field>
+
+          <GroupHeading th={th}>{t("motion.tap.layersGroup", "Active layers")}</GroupHeading>
+          <Field th={th} label={t("motion.tap.layers", "Layers")}
+            hint={t("motion.tap.layersHint", "Taps only fire while one of these layers is active; leave all off for every layer")}>
+            <LayerChips th={th} t={t} layers={layers} mask={config.layerMask}
+              onChange={(m) => set({ layerMask: m })} />
+          </Field>
         </SettingsList>
       </div>
     </div>
   );
 }
 
-function LockSettings({ th, t, config, thresholdMax, onChange }: {
+function CarrySettings({ th, t, config, thresholdMax, onChange }: {
   th: CarbonTheme;
   t: (k: string, d: string) => string;
-  config: LockConfig;
+  config: CarryConfig;
   thresholdMax: number;
-  onChange: (c: LockConfig) => void;
+  onChange: (c: CarryConfig) => void;
 }) {
-  const set = (patch: Partial<LockConfig>) => onChange({ ...config, ...patch });
+  const set = (patch: Partial<CarryConfig>) => onChange({ ...config, ...patch });
   const dim = config.enabled ? 1 : 0.45;
 
   return (
     <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
       <EnableBar th={th}
-        title={t("motion.lock.title", "Motion lock")}
-        desc={t("motion.lock.desc", "Locks the keys automatically while it's moving in a bag, and unlocks once set down flat")}
+        title={t("motion.carry.title", "Carry sleep")}
+        desc={t("motion.carry.desc", "Sleeps the keyboard after sustained walking, so it isn't awake and firing in a bag")}
+        enabled={config.enabled}
+        onChange={(v) => set({ enabled: v })} />
+      <div className="custom-scrollbar"
+        style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "4px 24px 24px", opacity: dim, pointerEvents: config.enabled ? "auto" : "none" }}>
+        <SettingsList>
+          <Field th={th} label={t("motion.carry.motionThreshold", "Motion threshold")} tag="INT_THS"
+            value={String(config.motionThreshold)} height={24}>
+            <Slider th={th} value={config.motionThreshold} min={1} max={thresholdMax} onCommit={(v) => set({ motionThreshold: v })} />
+          </Field>
+          <Field th={th} label={t("motion.carry.motionDuration", "Sustained movement")} tag="STREAK"
+            value={`${Math.round(config.motionDurationMs / 1000)} s`} height={24}
+            hint={t("motion.carry.motionDurationHint", "Movement must be this sustained before sleeping — a single jolt won't do it; a key press always cancels")}>
+            <Slider th={th} value={config.motionDurationMs} min={5000} max={600000} step={5000}
+              onCommit={(v) => set({ motionDurationMs: v })} />
+          </Field>
+        </SettingsList>
+      </div>
+    </div>
+  );
+}
+
+function StillWakeSettings({ th, t, config, onChange }: {
+  th: CarbonTheme;
+  t: (k: string, d: string) => string;
+  config: StillWakeConfig;
+  onChange: (c: StillWakeConfig) => void;
+}) {
+  const set = (patch: Partial<StillWakeConfig>) => onChange({ ...config, ...patch });
+  const dim = config.enabled ? 1 : 0.45;
+
+  return (
+    <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+      <EnableBar th={th}
+        title={t("motion.stillWake.title", "Settle wake")}
+        desc={t("motion.stillWake.desc", "Stays awake once the keyboard has been set down still")}
         enabled={config.enabled}
         onChange={(v) => set({ enabled: v })} />
 
       <div className="custom-scrollbar"
         style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "4px 24px 24px", opacity: dim, pointerEvents: config.enabled ? "auto" : "none" }}>
         <SettingsList>
-          <GroupHeading th={th}>{t("motion.lock.lockGroup", "When to lock")}</GroupHeading>
-          <Field th={th} label={t("motion.lock.motionThreshold", "Lock threshold")} tag="ACT_THS"
-            value={String(config.motionThreshold)} height={24}>
-            <Slider th={th} value={config.motionThreshold} min={1} max={thresholdMax} onChange={(v) => set({ motionThreshold: v })} />
-          </Field>
-          <Field th={th} label={t("motion.lock.motionDuration", "Sustained movement")} tag="ACT_DUR"
-            value={`${config.motionDurationMs} ms`} height={24}
-            hint={t("motion.lock.motionDurationHint", "Stops a single jolt from locking")}>
-            <Slider th={th} value={config.motionDurationMs} min={200} max={10000} step={100} onChange={(v) => set({ motionDurationMs: v })} />
-          </Field>
-
-          <GroupHeading th={th}>{t("motion.lock.unlockGroup", "When to unlock")}</GroupHeading>
-          <Field th={th} label={t("motion.lock.stillThreshold", "Still threshold")}
-            value={String(config.stillThreshold)} height={24}>
-            <Slider th={th} value={config.stillThreshold} min={1} max={thresholdMax} onChange={(v) => set({ stillThreshold: v })} />
-          </Field>
-          <Field th={th} label={t("motion.lock.stillDuration", "Time held still")}
-            value={`${config.stillDurationMs} ms`} height={24}>
-            <Slider th={th} value={config.stillDurationMs} min={200} max={10000} step={100} onChange={(v) => set({ stillDurationMs: v })} />
-          </Field>
-          <Field th={th} label={t("motion.lock.requireFlat", "Require flat")}
-            hint={t("motion.lock.requireFlatHint", "Still isn't enough — must also be face up")}>
-            <Toggle th={th} checked={config.requireFlat} onChange={(v) => set({ requireFlat: v })} />
-          </Field>
-          {config.requireFlat && (
-            <Field th={th} label={t("motion.lock.flatTolerance", "Tilt tolerance")}
-              value={`${config.flatToleranceDeg}°`} height={24}>
-              <Slider th={th} value={config.flatToleranceDeg} min={2} max={45} onChange={(v) => set({ flatToleranceDeg: v })} />
-            </Field>
-          )}
-
-          <GroupHeading th={th}>{t("motion.lock.scopeGroup", "Lock scope")}</GroupHeading>
-          <Field th={th} label={t("motion.lock.scope", "While locked")}>
-            <ContentSwitcher th={th}
-              label={t("motion.lock.scope", "While locked")}
-              value={String(config.scope)}
-              opts={[
-                { id: String(LockScope.KEYS), label: t("motion.lock.scopeKeys", "Keys only") },
-                { id: String(LockScope.KEYS_AND_LEDS), label: t("motion.lock.scopeKeysLeds", "Keys + lighting") },
-                { id: String(LockScope.SOFT_OFF), label: t("motion.lock.scopeSoftOff", "Soft off") },
-              ]}
-              onChange={(v) => set({ scope: Number(v) as LockScope })} />
+          <Field th={th} label={t("motion.stillWake.settleDuration", "Settle time")} tag="SETTLE"
+            value={`${Math.round(config.settleDurationMs / 1000)} s`} height={24}
+            hint={t("motion.stillWake.settleDurationHint", "After a motion wake-up the keyboard must stay this still, or it goes straight back to sleep — a bag keeps moving, a desk doesn't")}>
+            <Slider th={th} value={config.settleDurationMs} min={2000} max={30000} step={1000}
+              onCommit={(v) => set({ settleDurationMs: v })} />
           </Field>
         </SettingsList>
       </div>

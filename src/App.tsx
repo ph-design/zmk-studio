@@ -96,7 +96,6 @@ async function listen_for_notifications(
         continue;
       }
 
-      console.log("Notification", value);
       pub("rpc_notification", value);
 
       const subsystem = Object.entries(value).find(

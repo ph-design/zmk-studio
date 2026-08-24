@@ -9,18 +9,20 @@ import { useSub } from "../usePubSub";
 import {
   getMotionBackend,
   Orientation,
-  type LockConfig,
+  type CarryConfig,
   type MotionBackend,
   type MotionCapabilities,
   type MotionLiveState,
+  type StillWakeConfig,
   type TapConfig,
 } from "./motionRpc";
 
 const IDLE_LIVE_STATE: MotionLiveState = {
   magnitude: 0,
-  orientation: Orientation.UNKNOWN,
-  locked: false,
+  orientation: Orientation.ORIENTATION_UNKNOWN,
+  carryActive: false,
   tapDetected: false,
+  lastClickSrc: 0,
 };
 
 export interface UseMotionOptions {
@@ -28,12 +30,8 @@ export interface UseMotionOptions {
   onMotionChanged?: () => void;
 }
 
-/*
- * Probes the motion subsystem once per connection and holds its config.
- * `hasMotion` is what gates the nav entry — a device without an IMU (or
- * firmware without the subsystem) fails the probe and the section never
- * appears, matching how the lighting sources are gated.
- */
+// Probes once per connection; `hasMotion` gates the nav entry, matching how
+// the lighting sources are gated.
 export function useMotion({ onMotionChanged }: UseMotionOptions = {}) {
   const { conn } = useContext(ConnectionContext);
   const lockState = useContext(LockStateContext);
@@ -41,12 +39,20 @@ export function useMotion({ onMotionChanged }: UseMotionOptions = {}) {
 
   const [capabilities, setCapabilities] = useState<MotionCapabilities | null>(null);
   const [tapConfig, setTapConfig] = useState<TapConfig | null>(null);
-  const [lockConfig, setLockConfig] = useState<LockConfig | null>(null);
+  const [carryConfig, setCarryConfig] = useState<CarryConfig | null>(null);
+  const [stillWakeConfig, setStillWakeConfig] = useState<StillWakeConfig | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [live, setLive] = useState<MotionLiveState>(IDLE_LIVE_STATE);
 
   const backend = useMemo<MotionBackend | null>(() => getMotionBackend(conn), [conn]);
   const generation = useRef(0);
+  // Last config each setter confirmed; failed applies roll back here instead
+  // of a closure snapshot, so in-flight applies can't clobber each other.
+  const lastGood = useRef<{ tap: TapConfig | null; carry: CarryConfig | null; stillWake: StillWakeConfig | null }>({
+    tap: null,
+    carry: null,
+    stillWake: null,
+  });
 
   useEffect(() => {
     generation.current++;
@@ -54,7 +60,8 @@ export function useMotion({ onMotionChanged }: UseMotionOptions = {}) {
 
     setCapabilities(null);
     setTapConfig(null);
-    setLockConfig(null);
+    setCarryConfig(null);
+    setStillWakeConfig(null);
     setLive(IDLE_LIVE_STATE);
     setLoaded(false);
 
@@ -72,21 +79,23 @@ export function useMotion({ onMotionChanged }: UseMotionOptions = {}) {
         return;
       }
 
-      const [tap, lock] = await Promise.all([
+      const [tap, carry, stillWake] = await Promise.all([
         caps.supportsTap ? backend.getTapConfig().catch(() => null) : Promise.resolve(null),
-        caps.supportsLock ? backend.getLockConfig().catch(() => null) : Promise.resolve(null),
+        caps.supportsCarry ? backend.getCarryConfig().catch(() => null) : Promise.resolve(null),
+        caps.supportsStillWake ? backend.getStillWakeConfig().catch(() => null) : Promise.resolve(null),
       ]);
       if (generation.current !== gen) return;
 
       setCapabilities(caps);
       setTapConfig(tap);
-      setLockConfig(lock);
+      setCarryConfig(carry);
+      setStillWakeConfig(stillWake);
+      lastGood.current = { tap, carry, stillWake };
       setLoaded(true);
     })();
   }, [backend, unlocked]);
 
-  // Real firmware pushes live state as a notification; the demo backend hands it
-  // over directly. Both paths land in the same state.
+  // Both the RPC notification and the demo callback land in the same state.
   useSub("rpc_notification.motion.liveState", (state: MotionLiveState) => setLive(state));
 
   const [liveWanted, setLiveWanted] = useState(false);
@@ -106,36 +115,62 @@ export function useMotion({ onMotionChanged }: UseMotionOptions = {}) {
     };
   }, [backend, capabilities, liveWanted]);
 
-  const applyTapConfig = useCallback(
-    async (config: TapConfig): Promise<boolean> => {
+  const apply = useCallback(
+    async <T,>(
+      config: T,
+      send: (config: T) => Promise<boolean>,
+      set: (config: T | null) => void,
+      onGood: (config: T) => void,
+      rollback: () => void
+    ): Promise<boolean> => {
       if (!backend) return false;
-      const previous = tapConfig;
-      setTapConfig(config);
-      const ok = await backend.setTapConfig(config).catch(() => false);
+      set(config);
+      const ok = await send(config).catch(() => false);
       if (ok) {
+        onGood(config);
         onMotionChanged?.();
       } else {
-        setTapConfig(previous);
+        rollback();
       }
       return ok;
     },
-    [backend, onMotionChanged, tapConfig]
+    [backend, onMotionChanged]
   );
 
-  const applyLockConfig = useCallback(
-    async (config: LockConfig): Promise<boolean> => {
-      if (!backend) return false;
-      const previous = lockConfig;
-      setLockConfig(config);
-      const ok = await backend.setLockConfig(config).catch(() => false);
-      if (ok) {
-        onMotionChanged?.();
-      } else {
-        setLockConfig(previous);
-      }
-      return ok;
-    },
-    [backend, onMotionChanged, lockConfig]
+  const applyTapConfig = useCallback(
+    (config: TapConfig) =>
+      apply(
+        config,
+        (c) => backend?.setTapConfig(c) ?? Promise.resolve(false),
+        setTapConfig,
+        (c) => (lastGood.current.tap = c),
+        () => setTapConfig(lastGood.current.tap)
+      ),
+    [apply, backend]
+  );
+
+  const applyCarryConfig = useCallback(
+    (config: CarryConfig) =>
+      apply(
+        config,
+        (c) => backend?.setCarryConfig(c) ?? Promise.resolve(false),
+        setCarryConfig,
+        (c) => (lastGood.current.carry = c),
+        () => setCarryConfig(lastGood.current.carry)
+      ),
+    [apply, backend]
+  );
+
+  const applyStillWakeConfig = useCallback(
+    (config: StillWakeConfig) =>
+      apply(
+        config,
+        (c) => backend?.setStillWakeConfig(c) ?? Promise.resolve(false),
+        setStillWakeConfig,
+        (c) => (lastGood.current.stillWake = c),
+        () => setStillWakeConfig(lastGood.current.stillWake)
+      ),
+    [apply, backend]
   );
 
   return {
@@ -143,9 +178,11 @@ export function useMotion({ onMotionChanged }: UseMotionOptions = {}) {
     loaded,
     capabilities,
     tapConfig,
-    lockConfig,
+    carryConfig,
+    stillWakeConfig,
     applyTapConfig,
-    applyLockConfig,
+    applyCarryConfig,
+    applyStillWakeConfig,
     live,
     /** Live push costs airtime on BLE — only the motion view turns it on. */
     setLiveWanted,

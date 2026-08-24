@@ -1,161 +1,98 @@
-import { Request } from "@zmkfirmware/zmk-studio-ts-client";
 import type { RpcConnection } from "@zmkfirmware/zmk-studio-ts-client";
 import type { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
+import {
+  Orientation,
+  type Capabilities,
+  type CarryConfig,
+  type LiveState,
+  type Request as MotionRequest,
+  type Response as MotionResponse,
+  type StillWakeConfig,
+  type TapConfig,
+} from "@zmkfirmware/zmk-studio-ts-client/motion";
 
 import { call_rpc } from "../rpc/logging";
-import { getDemoMotionBackend } from "../demo/motionBackend";
+import { DEMO_LABEL, getDemoMotionBackend } from "../demo/motionBackend";
 
-/*
- * Client-side contract for the proposed `zmk.motion` RPC subsystem (IMU /
- * LIS2DH12 features on PH60SCV2EVO): case-tap actions and the walk-detect key
- * lock. See docs/motion-proto.md for the .proto this mirrors field-for-field.
- *
- * The generated ts-client (`@ph-design/zmk-studio-ts-client-fork`) does not
- * carry this subsystem yet, and ts-proto encoders silently drop fields they
- * don't know — so until the fork is regenerated we cannot put a `motion`
- * request on the wire at all. Everything above this module is written against
- * the real contract; only `clientSupportsMotion` + `rpcBackend` care whether
- * the codec has caught up, and both start working the day it does with no
- * code change here.
- */
+// Generated codec types, re-exported so the app imports motion types from here.
+export { Orientation };
+export type {
+  Capabilities as MotionCapabilities,
+  CarryConfig,
+  LiveState as MotionLiveState,
+  StillWakeConfig,
+  TapConfig,
+};
 
-export enum TapKind {
-  SINGLE = 0,
-  DOUBLE = 1,
-}
+export type TapSlot =
+  | "leftSingleBinding"
+  | "leftDoubleBinding"
+  | "rightSingleBinding"
+  | "rightDoubleBinding";
 
-/** What the walk-detect lock disables while it is engaged. */
-export enum LockScope {
-  KEYS = 0,
-  KEYS_AND_LEDS = 1,
-  SOFT_OFF = 2,
-}
-
-/** Case orientation, from the sensor's 6D position detection. */
-export enum Orientation {
-  UNKNOWN = 0,
-  FLAT_UP = 1,
-  FLAT_DOWN = 2,
-  TILTED = 3,
-}
-
-export interface MotionCapabilities {
-  /** Sensor part number, e.g. "lis2dh12". Shown as-is in the device panel. */
-  sensor: string;
-  supportsTap: boolean;
-  supportsDoubleTap: boolean;
-  supportsLock: boolean;
-  /** Upper bound for every threshold field, so sliders aren't hard-coded here. */
-  thresholdMax: number;
-}
-
-export interface TapConfig {
-  enabled: boolean;
-  kind: TapKind;
-  /** LIS2DH12 CLICK_THS. */
-  threshold: number;
-  /** LIS2DH12 TIME_LIMIT — how long a tap may last to still count. */
-  timeLimitMs: number;
-  /** LIS2DH12 TIME_LATENCY — dead time after a tap. */
-  latencyMs: number;
-  /** LIS2DH12 TIME_WINDOW — second-tap window; DOUBLE only. */
-  windowMs: number;
-  binding: BehaviorBinding | undefined;
-  /** Bitmask of layers the tap is active on; 0 = every layer. */
-  layerMask: number;
-}
-
-export interface LockConfig {
-  enabled: boolean;
-  /** Sustained-movement threshold that engages the lock (ACT_THS). */
-  motionThreshold: number;
-  /** How long movement must persist before locking — rejects single jolts. */
-  motionDurationMs: number;
-  /** Below this the case counts as still. */
-  stillThreshold: number;
-  /** How long it must stay still before unlocking. */
-  stillDurationMs: number;
-  /** Require a flat-face-up orientation to unlock, not just stillness. */
-  requireFlat: boolean;
-  flatToleranceDeg: number;
-  scope: LockScope;
-}
-
-/** Pushed while live streaming is on; drives threshold calibration. */
-export interface MotionLiveState {
-  magnitude: number;
-  orientation: Orientation;
-  locked: boolean;
-  tapDetected: boolean;
-}
+export const TAP_SLOTS: { slot: TapSlot; side: "left" | "right"; taps: 1 | 2 }[] = [
+  { slot: "leftSingleBinding", side: "left", taps: 1 },
+  { slot: "leftDoubleBinding", side: "left", taps: 2 },
+  { slot: "rightSingleBinding", side: "right", taps: 1 },
+  { slot: "rightDoubleBinding", side: "right", taps: 2 },
+];
 
 export interface MotionBackend {
-  getCapabilities(): Promise<MotionCapabilities | null>;
+  getCapabilities(): Promise<Capabilities | null>;
   getTapConfig(): Promise<TapConfig | null>;
   setTapConfig(config: TapConfig): Promise<boolean>;
-  getLockConfig(): Promise<LockConfig | null>;
-  setLockConfig(config: LockConfig): Promise<boolean>;
+  getCarryConfig(): Promise<CarryConfig | null>;
+  setCarryConfig(config: CarryConfig): Promise<boolean>;
+  getStillWakeConfig(): Promise<StillWakeConfig | null>;
+  setStillWakeConfig(config: StillWakeConfig): Promise<boolean>;
   saveState(): Promise<boolean>;
   /** Live push is metered — only on while a calibration view is mounted. */
   setLiveStream(on: boolean): Promise<boolean>;
   /** Non-RPC backends deliver live state here; the RPC one uses notifications. */
-  subscribeLive?: (cb: (state: MotionLiveState) => void) => () => void;
+  subscribeLive?: (cb: (state: LiveState) => void) => () => void;
 }
-
-/*
- * Round-trip a motion request through the generated codec: if the field
- * survives, the fork carries the subsystem and real RPC is safe to use. This
- * beats a version check — it tracks the artifact actually installed.
- */
-let codecSupport: boolean | undefined;
-export function clientSupportsMotion(): boolean {
-  if (codecSupport === undefined) {
-    try {
-      const encoded = Request.encode({
-        requestId: 0,
-        motion: { getCapabilities: true },
-      } as unknown as Request).finish();
-      const decoded = Request.decode(encoded) as unknown as { motion?: unknown };
-      codecSupport = decoded.motion !== undefined;
-    } catch {
-      codecSupport = false;
-    }
-  }
-  return codecSupport;
-}
-
-type MotionRequest = Record<string, unknown>;
-type MotionResponse = Record<string, unknown> | undefined;
 
 async function callMotion(
   conn: RpcConnection,
   motion: MotionRequest
-): Promise<MotionResponse> {
-  const resp = await call_rpc(conn, { motion } as unknown as Parameters<typeof call_rpc>[1]);
-  return (resp as unknown as { motion?: Record<string, unknown> }).motion;
+): Promise<MotionResponse | undefined> {
+  const resp = await call_rpc(conn, { motion });
+  return resp.motion;
 }
 
+/*
+ * Request fields are getCapabilities/setTapConfig/… but the Response oneof
+ * fields are capabilities/tapConfig/… — read the response by its own names.
+ */
 function rpcBackend(conn: RpcConnection): MotionBackend {
   return {
     async getCapabilities() {
       const r = await callMotion(conn, { getCapabilities: true });
-      return (r?.getCapabilities as MotionCapabilities) ?? null;
+      return r?.capabilities ?? null;
     },
     async getTapConfig() {
       const r = await callMotion(conn, { getTapConfig: true });
-      return (r?.getTapConfig as TapConfig) ?? null;
+      return r?.tapConfig ?? null;
     },
     async setTapConfig(config) {
       const r = await callMotion(conn, { setTapConfig: config });
       return r?.setTapConfig === true;
     },
-    async getLockConfig() {
-      const r = await callMotion(conn, { getLockConfig: true });
-      return (r?.getLockConfig as LockConfig) ?? null;
+    async getCarryConfig() {
+      const r = await callMotion(conn, { getCarryConfig: true });
+      return r?.carryConfig ?? null;
     },
-    async setLockConfig(config) {
-      const r = await callMotion(conn, { setLockConfig: config });
-      return r?.setLockConfig === true;
+    async setCarryConfig(config) {
+      const r = await callMotion(conn, { setCarryConfig: config });
+      return r?.setCarryConfig === true;
+    },
+    async getStillWakeConfig() {
+      const r = await callMotion(conn, { getStillWakeConfig: true });
+      return r?.stillWakeConfig ?? null;
+    },
+    async setStillWakeConfig(config) {
+      const r = await callMotion(conn, { setStillWakeConfig: config });
+      return r?.setStillWakeConfig === true;
     },
     async saveState() {
       const r = await callMotion(conn, { saveState: true });
@@ -168,52 +105,56 @@ function rpcBackend(conn: RpcConnection): MotionBackend {
   };
 }
 
-/*
- * Resolve the backend for a connection. Real hardware reports "unsupported"
- * until the codec catches up — deliberately, so a device never shows invented
- * state. Demo connections get an in-memory firmware so the panel stays
- * reviewable in the meantime.
- */
+// Demo connections get the in-memory firmware — or null when the demo has the
+// feature toggled off. Everything else gets real RPC.
 export function getMotionBackend(
   conn: RpcConnection | null | undefined
 ): MotionBackend | null {
   if (!conn) return null;
-  if (clientSupportsMotion()) return rpcBackend(conn);
-  return getDemoMotionBackend(conn.label);
+  if (conn.label === DEMO_LABEL) return getDemoMotionBackend(conn.label);
+  return rpcBackend(conn);
 }
 
 // ─── Defaults / helpers ────────────────────────────────────────────────────────
 
 export const ALL_LAYERS_MASK = 0;
 
-export function orientationIsFlat(o: Orientation): boolean {
-  return o === Orientation.FLAT_UP || o === Orientation.FLAT_DOWN;
+export function slotBinding(config: TapConfig, slot: TapSlot): BehaviorBinding | undefined {
+  return config[slot];
+}
+
+export function withSlotBinding(
+  config: TapConfig,
+  slot: TapSlot,
+  binding: BehaviorBinding | undefined
+): TapConfig {
+  return { ...config, [slot]: binding };
+}
+
+function bindingKey(b: BehaviorBinding | undefined): string {
+  return b === undefined ? "-" : `${b.behaviorId}/${b.param1}/${b.param2}`;
 }
 
 export function tapConfigsEqual(a: TapConfig, b: TapConfig): boolean {
   return (
     a.enabled === b.enabled &&
-    a.kind === b.kind &&
     a.threshold === b.threshold &&
     a.timeLimitMs === b.timeLimitMs &&
     a.latencyMs === b.latencyMs &&
     a.windowMs === b.windowMs &&
     a.layerMask === b.layerMask &&
-    (a.binding?.behaviorId ?? -1) === (b.binding?.behaviorId ?? -1) &&
-    (a.binding?.param1 ?? 0) === (b.binding?.param1 ?? 0) &&
-    (a.binding?.param2 ?? 0) === (b.binding?.param2 ?? 0)
+    TAP_SLOTS.every((s) => bindingKey(a[s.slot]) === bindingKey(b[s.slot]))
   );
 }
 
-export function lockConfigsEqual(a: LockConfig, b: LockConfig): boolean {
+export function carryConfigsEqual(a: CarryConfig, b: CarryConfig): boolean {
   return (
     a.enabled === b.enabled &&
     a.motionThreshold === b.motionThreshold &&
-    a.motionDurationMs === b.motionDurationMs &&
-    a.stillThreshold === b.stillThreshold &&
-    a.stillDurationMs === b.stillDurationMs &&
-    a.requireFlat === b.requireFlat &&
-    a.flatToleranceDeg === b.flatToleranceDeg &&
-    a.scope === b.scope
+    a.motionDurationMs === b.motionDurationMs
   );
+}
+
+export function stillWakeConfigsEqual(a: StillWakeConfig, b: StillWakeConfig): boolean {
+  return a.enabled === b.enabled && a.settleDurationMs === b.settleDurationMs;
 }

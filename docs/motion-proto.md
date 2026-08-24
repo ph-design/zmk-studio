@@ -61,99 +61,94 @@ package zmk.motion;
 import "keymap.proto";
 
 message Request {
-  oneof request_type {
-    bool       get_capabilities = 1;
-    bool       get_tap_config   = 2;
-    TapConfig  set_tap_config   = 3;
-    bool       get_lock_config  = 4;
-    LockConfig set_lock_config  = 5;
-    bool       save_state       = 6;
-    bool       set_live_stream  = 7;
-  }
+    oneof request_type {
+        bool        get_capabilities = 1;
+        bool        get_tap_config   = 2;
+        TapConfig   set_tap_config   = 3;
+        bool        get_carry_config = 4;
+        CarryConfig set_carry_config = 5;
+        bool        save_state       = 6;
+        bool        set_live_stream  = 7;
+    }
 }
 
 message Response {
-  oneof response_type {
-    Capabilities capabilities     = 1;  // get_capabilities
-    TapConfig    tap_config       = 2;
-    bool         set_tap_config   = 3;
-    LockConfig   lock_config      = 4;
-    bool         set_lock_config  = 5;
-    bool         save_state       = 6;
-    bool         set_live_stream  = 7;
-  }
+    oneof response_type {
+        Capabilities capabilities     = 1;
+        TapConfig    tap_config       = 2;
+        bool         set_tap_config   = 3;
+        CarryConfig  carry_config     = 4;
+        bool         set_carry_config = 5;
+        bool         save_state       = 6;
+        bool         set_live_stream  = 7;
+    }
 }
 
 message Capabilities {
-  string sensor            = 1;  // "lis2dh12"
-  bool   supports_tap      = 2;
-  bool   supports_double_tap = 3;
-  bool   supports_lock     = 4;
-  uint32 threshold_max     = 5;  // slider bound; UI must not hard-code it
+    string sensor              = 1;  // "lis2dh12"
+    bool   supports_tap        = 2;
+    bool   supports_double_tap = 3;
+    bool   supports_carry      = 4;
+    uint32 threshold_max       = 5;  // slider bound; UI must not hard-code it
 }
 
-enum TapKind {
-  TAP_KIND_SINGLE = 0;
-  TAP_KIND_DOUBLE = 1;
-}
-
+// Any binding may be omitted. When a single and its double are both set on
+// the same side, the single fires one window late so the double can supersede.
 message TapConfig {
-  bool    enabled       = 1;
-  TapKind kind          = 2;
-  uint32  threshold     = 3;  // CLICK_THS
-  uint32  time_limit_ms = 4;  // TIME_LIMIT
-  uint32  latency_ms    = 5;  // TIME_LATENCY
-  uint32  window_ms     = 6;  // TIME_WINDOW, DOUBLE only
-  zmk.keymap.BehaviorBinding binding = 7;
-  uint32  layer_mask    = 8;  // 0 = all layers
+    bool   enabled       = 1;
+    uint32 threshold     = 2;  // CLICK_THS, shared by all taps
+    uint32 time_limit_ms = 3;  // TIME_LIMIT
+    uint32 latency_ms    = 4;  // TIME_LATENCY
+    uint32 window_ms     = 5;  // TIME_WINDOW — second-tap / arbitration window
+    zmk.keymap.BehaviorBinding left_single_binding  = 6;
+    zmk.keymap.BehaviorBinding left_double_binding  = 7;
+    zmk.keymap.BehaviorBinding right_single_binding = 8;
+    zmk.keymap.BehaviorBinding right_double_binding = 9;
+    uint32 layer_mask    = 10;  // 0 = all layers
 }
 
-enum LockScope {
-  LOCK_SCOPE_KEYS           = 0;
-  LOCK_SCOPE_KEYS_AND_LEDS  = 1;
-  LOCK_SCOPE_SOFT_OFF       = 2;
-}
-
-message LockConfig {
-  bool      enabled             = 1;
-  uint32    motion_threshold    = 2;  // ACT_THS — engages the lock
-  uint32    motion_duration_ms  = 3;  // sustained, so one jolt doesn't lock
-  uint32    still_threshold     = 4;
-  uint32    still_duration_ms   = 5;
-  bool      require_flat        = 6;  // 6D position, not just stillness
-  uint32    flat_tolerance_deg  = 7;
-  LockScope scope               = 8;
+message CarryConfig {
+    bool   enabled            = 1;
+    uint32 motion_threshold   = 2;  // INT_THS for the any-motion interrupt
+    uint32 motion_duration_ms = 3;  // walking must persist this long before sleep
 }
 
 enum Orientation {
-  ORIENTATION_UNKNOWN   = 0;
-  ORIENTATION_FLAT_UP   = 1;
-  ORIENTATION_FLAT_DOWN = 2;
-  ORIENTATION_TILTED    = 3;
+    ORIENTATION_UNKNOWN   = 0;
+    ORIENTATION_FLAT_UP   = 1;
+    ORIENTATION_FLAT_DOWN = 2;
+    ORIENTATION_TILTED    = 3;
 }
 
 message LiveState {
-  uint32      magnitude    = 1;
-  Orientation orientation  = 2;
-  bool        locked       = 3;
-  bool        tap_detected = 4;
+    // Peak acceleration within the push period, in the same raw counts the
+    // threshold fields use, so a threshold marker can be drawn on the meter.
+    uint32      magnitude      = 1;
+    Orientation orientation    = 2;
+    bool        carry_active   = 3;  // walking detected, sleep imminent
+    bool        tap_detected   = 4;
+    uint32      last_click_src = 5;  // raw CLICK_SRC of the last tap
 }
 
 message Notification {
-  LiveState live_state = 1;
+    oneof notification_type {
+        LiveState live_state = 1;
+    }
 }
 ```
 
 ### Behaviour notes
 
-- **Lock semantics.** Two-sided state machine, not an idle timeout: sustained
-  movement above `motion_threshold` for `motion_duration_ms` engages the lock;
-  it disengages only after `still_duration_ms` below `still_threshold`, and — if
-  `require_flat` — with the case flat and face up. "Locked" here means *input is
-  suppressed* (anti-pocket-press), not Studio's own lock state.
-- **Studio keeps working while locked.** RPC is independent of key input, so a
-  locked keyboard must still answer requests. Studio shows the live lock state
-  so a user doesn't mistake a suppressed keyboard for a broken one.
+- **Carry sleep semantics.** A one-way trip, not a toggle: any-motion events
+  build a streak; a gap of ~2 s or a key press resets it. Sustained movement
+  for `motion_duration_ms` sends the keyboard to System OFF (the normal ZMK
+  sleep path, watchdog-fed). Waking is a key press, exactly like the idle
+  timeout — there is no unlock message because nothing is locked, it was
+  asleep.
+- **Tap sides.** The LIS2DH12 click engine reports which direction the case
+  was struck via CLICK_SRC's sign bit; the firmware maps that to left/right
+  and dispatches the matching binding. `CONFIG_ZMK_MOTION_TAP_SIDE_INVERT`
+  flips the mapping for upside-down builds.
 - **`set_live_stream`** gates the `LiveState` notification. Studio turns it on
   only while the motion panel is open, because it's ~10 Hz traffic and BLE pays
   for it. Default off on connect.
