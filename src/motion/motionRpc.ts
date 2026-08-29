@@ -158,3 +158,39 @@ export function carryConfigsEqual(a: CarryConfig, b: CarryConfig): boolean {
 export function stillWakeConfigsEqual(a: StillWakeConfig, b: StillWakeConfig): boolean {
   return a.enabled === b.enabled && a.settleDurationMs === b.settleDurationMs;
 }
+
+export const CLICK_SRC = {
+  IA: 0x80,
+  DCLICK: 0x40,
+  SCLICK: 0x20,
+  SIGN: 0x10,
+  Z: 0x04,
+  Y: 0x02,
+  X: 0x01,
+} as const;
+
+export interface TapEvent {
+  side: "left" | "right";
+  taps: 1 | 2;
+  axes: string;
+  src: number;
+  at: number;
+}
+
+export function decodeClickSrc(src: number): TapEvent {
+  const axes =
+    [
+      src & CLICK_SRC.X ? "X" : "",
+      src & CLICK_SRC.Y ? "Y" : "",
+      src & CLICK_SRC.Z ? "Z" : "",
+    ]
+      .filter(Boolean)
+      .join("+") || "?";
+  return {
+    side: src & CLICK_SRC.SIGN ? "left" : "right",
+    taps: src & CLICK_SRC.DCLICK ? 2 : 1,
+    axes,
+    src,
+    at: Date.now(),
+  };
+}
