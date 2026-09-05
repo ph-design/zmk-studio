@@ -1,4 +1,4 @@
-import { Plus, Minus, Link2 } from "lucide-react";
+import { Plus, Minus, Link2, ChevronDown } from "lucide-react";
 import type { CarbonTheme } from "./theme";
 import type { ReactNode } from "react";
 
@@ -18,48 +18,6 @@ export function secBtn(th: CarbonTheme): React.CSSProperties {
 
 // ─── Shared form widgets ───────────────────────────────────────────────────────
 
-export function Toggle({ th, checked, onChange, disabled }: {
-  th: CarbonTheme;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-      style={{
-        position: "relative",
-        width: 40,
-        height: 22,
-        borderRadius: 11,
-        border: "none",
-        cursor: disabled ? "default" : "pointer",
-        background: checked ? th.toggleOn : th.toggleOff,
-        opacity: disabled ? 0.5 : 1,
-        transition: "background 0.15s",
-        padding: 0,
-      }}
-    >
-      <span
-        style={{
-          position: "absolute",
-          top: 2,
-          left: checked ? 20 : 2,
-          width: 18,
-          height: 18,
-          borderRadius: "50%",
-          background: "#fff",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-          transition: "left 0.15s",
-        }}
-      />
-    </button>
-  );
-}
-
 /** Carbon-style segmented button group. */
 export function SegmentedControl({ th, opts, value, onChange }: {
   th: CarbonTheme;
@@ -75,6 +33,90 @@ export function SegmentedControl({ th, opts, value, onChange }: {
           {o.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+/*
+ * Carbon content switcher.
+ *
+ * Note the selected item is *inverse* (`$layer-selected-inverse` on
+ * `$text-inverse`), not the interactive blue — that's what distinguishes it from
+ * a button group in Carbon, and it's why it survives an accent change unaltered.
+ * Unselected items get a subtle divider, suppressed either side of the selection
+ * the way Carbon's `::before` rule does.
+ *
+ * Carbon caps this at five items; past that the labels stop fitting and a Select
+ * is the right control instead.
+ */
+export function ContentSwitcher<T extends string>({ th, opts, value, onChange, size = "sm", label }: {
+  th: CarbonTheme;
+  opts: { id: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+  /** Defaults to Carbon's `sm` — `md` reads oversized next to 14px labels. */
+  size?: "sm" | "md" | "lg";
+  label?: string;
+}) {
+  const height = size === "sm" ? 32 : size === "lg" ? 48 : 40;
+  const selectedIdx = opts.findIndex((o) => o.id === value);
+
+  return (
+    // The outline lives on the container, not the items: per-item borders would
+    // double up where two of them meet.
+    <div role="tablist" aria-label={label}
+      style={{ display: "flex", width: "100%", maxWidth: 420, border: `1px solid ${th.textPrimary}` }}>
+      {opts.map((o, i) => {
+        const selected = i === selectedIdx;
+        // Carbon suppresses the divider on both sides of the selection.
+        const divider = i > 0 && !selected && i - 1 !== selectedIdx;
+        return (
+          <button key={o.id} role="tab" aria-selected={selected} onClick={() => onChange(o.id)}
+            style={{
+              flex: 1, minWidth: 0, height, padding: "0 12px", border: "none",
+              fontSize: 14, fontFamily: "var(--font-sans)", cursor: "pointer",
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+              background: selected ? th.textPrimary : th.fieldBg,
+              color: selected ? th.bg : th.textSecondary,
+              // Inset shadow rather than a border, so items don't shift by a
+              // pixel as the divider appears and disappears.
+              boxShadow: divider ? `inset 1px 0 0 ${th.borderStrong}` : "none",
+              transition: "background 0.11s, color 0.11s",
+            }}>
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Carbon select. Fluid field with a single strong bottom border — the shape
+ * Carbon uses for every dropdown, and the right control once a choice outgrows a
+ * content switcher.
+ */
+export function Select<T extends string>({ th, opts, value, onChange, label }: {
+  th: CarbonTheme;
+  opts: { id: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+  label?: string;
+}) {
+  return (
+    <div style={{ position: "relative", display: "inline-flex", width: "100%", maxWidth: 420 }}>
+      <select value={value} aria-label={label} onChange={(e) => onChange(e.target.value as T)}
+        style={{
+          appearance: "none", width: "100%", height: 40, padding: "0 40px 0 16px",
+          fontSize: 14, fontFamily: "var(--font-sans)", cursor: "pointer",
+          background: th.fieldBg, color: th.textPrimary,
+          border: "none", borderBottom: `1px solid ${th.borderStrong}`,
+        }}>
+        {opts.map((o) => (
+          <option key={o.id} value={o.id}>{o.label}</option>
+        ))}
+      </select>
+      <ChevronDown size={16} style={{ position: "absolute", right: 14, top: 12, color: th.iconPrimary, pointerEvents: "none" }} />
     </div>
   );
 }
@@ -106,14 +148,10 @@ export function normalizeLang(lang: string): string {
 
 // ─── Small presentational components ───────────────────────────────────────────
 
-/**
- * Carbon tag. `square` keeps the corners sharp even in rounded-corners mode —
- * used for the text scope tags (e.g. Tap-Hold's "built-in") where a pill shape
- * reads as a button rather than a label.
- */
-export function Badge({ active, children, th, square }: { active: boolean; children: React.ReactNode; th: CarbonTheme; square?: boolean }) {
+/** Carbon tag. */
+export function Badge({ active, children, th }: { active: boolean; children: React.ReactNode; th: CarbonTheme }) {
   return (
-    <span className={square ? "carbon-badge-square" : undefined} style={{
+    <span style={{
       minWidth: 20, height: 20, padding: "0 4px",
       display: "flex", alignItems: "center", justifyContent: "center",
       fontSize: 11, fontWeight: 700,
