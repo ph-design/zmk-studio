@@ -41,8 +41,6 @@ export const DARK = {
   keySelected: "#0f62fe",
   keySelectedBorder: "#78a9ff",
   fieldBg: "#2d2d2d",
-  toggleOff: "#6f6f6f",
-  toggleOn: "#42be65",
   // Distinct panel shades so regions read apart, matching the Figma template.
   headerBg: "#161616",
   railBg: "#1c1c1c",
@@ -84,8 +82,6 @@ export const LIGHT: typeof DARK = {
   keySelected: "#0f62fe",
   keySelectedBorder: "#0043ce",
   fieldBg: "#f4f4f4",
-  toggleOff: "#8d8d8d",
-  toggleOn: "#24a148",
   headerBg: "#f4f4f4",
   railBg: "#ffffff",
   breadcrumbBg: "#f4f4f4",

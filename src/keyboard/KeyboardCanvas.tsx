@@ -1,4 +1,4 @@
-import { useRef, type ReactNode, type RefObject } from "react";
+import { useEffect, useRef, type ReactNode, type RefObject } from "react";
 
 import type { CarbonTheme } from "../carbon/theme";
 import { ZoomControl } from "../carbon/CarbonChrome";
@@ -31,6 +31,29 @@ interface KeyboardCanvasProps {
  */
 export function KeyboardCanvas({ th, t, scale, setScale, padding = 12, children }: KeyboardCanvasProps) {
   const fitContainerRef = useRef<HTMLDivElement>(null);
+  const setScaleRef = useRef(setScale);
+  setScaleRef.current = setScale;
+
+  useEffect(() => {
+    const el = fitContainerRef.current;
+    if (!el) return;
+
+    // Wheel zooms from the canvas's *current visual* scale, so an "auto" fit
+    // continues exactly where it landed instead of jumping to 100%.
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const canvas = el.querySelector<HTMLElement>(".keyboard-scale");
+      const matrix = canvas ? new DOMMatrixReadOnly(getComputedStyle(canvas).transform) : null;
+      const current = matrix && matrix.a > 0 ? matrix.a : 1;
+      const next = Math.min(2, Math.max(0.4, Math.round((current + (e.deltaY < 0 ? 0.1 : -0.1)) * 100) / 100));
+      setScaleRef.current(next);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+    };
+  }, []);
 
   return (
     <div
@@ -44,7 +67,9 @@ export function KeyboardCanvas({ th, t, scale, setScale, padding = 12, children 
         alignItems: "center",
         justifyContent: "center",
         padding,
-        overflow: "auto",
+        // Panning is a translate layer with its own bounds, so a native scroll
+        // bar appearing/vanishing as the canvas moves is just noise.
+        overflow: "hidden",
       }}
     >
       {children(fitContainerRef)}

@@ -20,7 +20,7 @@ import type {
 import type { Keymap } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import type { IndicatorPositionDraft } from "../carbon/useKeyboardModel";
 import type { CarbonTheme } from "../carbon/theme";
-import { Toggle } from "../carbon/CarbonChrome";
+import { RealCarbonToggle } from "../carbon/RealCarbonToggle";
 
 import HsbColorPicker, {
   type HsbColor,
@@ -541,7 +541,7 @@ const Block = ({ title, children }: { title: string; children: React.ReactNode }
   </section>
 );
 
-// Carbon toggle: pill switch plus its state label. Shares the `Toggle` widget
+// DIP-style toggle plus its state label. Shares the `RealCarbonToggle` widget
 // with the rest of the app so every on/off control reads the same.
 const OnOff = ({
   th,
@@ -557,8 +557,8 @@ const OnOff = ({
   const { t } = useTranslation();
   return (
     <div className="flex items-center gap-2.5">
-      <Toggle th={th} checked={value} onChange={onChange} disabled={disabled} />
-      <span className="text-sm" style={{ color: th.textSecondary }}>
+      <RealCarbonToggle checked={value} onChange={onChange} disabled={disabled} />
+      <span aria-hidden="true" className="text-sm" style={{ color: th.textSecondary }}>
         {value ? t("lighting.on", "On") : t("lighting.off", "Off")}
       </span>
     </div>

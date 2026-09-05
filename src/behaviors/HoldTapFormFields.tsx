@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronRight } from "lucide-react";
 import { HoldTapConfig, HoldTapFlavor_Flavor } from "@zmkfirmware/zmk-studio-ts-client/behaviors";
+import { RealCarbonToggle } from "../carbon/RealCarbonToggle";
 import { FLAVOR_I18N } from "./holdTapUtils";
 
 const FLAVOR_OPTIONS: HoldTapFlavor_Flavor[] = [
@@ -100,7 +101,7 @@ const MsField = ({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-3">
-        <span className="text-sm text-base-content/60 min-w-[7rem] shrink-0 whitespace-nowrap">
+        <span className="text-base text-base-content/60 min-w-[7rem] shrink-0 whitespace-nowrap">
           {label}
         </span>
         <input
@@ -172,36 +173,14 @@ const ToggleRow = ({
   return (
     <div className="flex items-center justify-between gap-3 py-1.5">
       <div className="flex flex-col min-w-0">
-        <span className="text-sm text-base-content leading-tight">{label}</span>
+        <span className="text-base text-base-content leading-tight">{label}</span>
         {desc ? <span className="text-sm text-base-content/55 leading-snug">{desc}</span> : null}
       </div>
-      <div
-        className="flex items-center gap-1 flex-shrink-0"
-        role="radiogroup"
-        aria-label={label}
-      >
-        <button
-          type="button"
-          role="radio"
-          aria-checked={checked}
-          onClick={() => onChange(true)}
-          className={`px-3 py-1 rounded text-sm cursor-pointer transition-colors ${
-            checked ? "bg-primary text-primary-content" : "text-base-content hover:bg-base-300"
-          }`}
-        >
-          {t("holdTap.on", "On")}
-        </button>
-        <button
-          type="button"
-          role="radio"
-          aria-checked={!checked}
-          onClick={() => onChange(false)}
-          className={`px-3 py-1 rounded text-sm cursor-pointer transition-colors ${
-            !checked ? "bg-primary text-primary-content" : "text-base-content hover:bg-base-300"
-          }`}
-        >
-          {t("holdTap.off", "Off")}
-        </button>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <RealCarbonToggle checked={checked} onChange={onChange} />
+        <span aria-hidden="true" className="w-6 text-sm text-base-content/55">
+          {checked ? t("holdTap.on", "On") : t("holdTap.off", "Off")}
+        </span>
       </div>
     </div>
   );

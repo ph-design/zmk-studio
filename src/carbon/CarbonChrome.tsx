@@ -1,4 +1,4 @@
-import { Plus, Minus, Link2, Check, ChevronDown } from "lucide-react";
+import { Plus, Minus, Link2, ChevronDown } from "lucide-react";
 import type { CarbonTheme } from "./theme";
 import type { ReactNode } from "react";
 
@@ -17,66 +17,6 @@ export function secBtn(th: CarbonTheme): React.CSSProperties {
 }
 
 // ─── Shared form widgets ───────────────────────────────────────────────────────
-
-/*
- * Carbon toggle, at both of Carbon's two sizes. `sm` (32×16, checkmark in the
- * handle) is the one to reach for on a settings row that sits among sliders —
- * the default 48×24 reads as the primary control of a whole section, which is
- * what the enable bars above the rows use it for.
- */
-export function Toggle({ th, checked, onChange, disabled, size = "md" }: {
-  th: CarbonTheme;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  disabled?: boolean;
-  size?: "md" | "sm";
-}) {
-  const sm = size === "sm";
-  const track = sm ? { w: 32, h: 16 } : { w: 48, h: 24 };
-  const knob = sm ? 10 : 18;
-  const inset = (track.h - knob) / 2;
-
-  return (
-    <button
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-      style={{
-        position: "relative",
-        flexShrink: 0,
-        width: track.w,
-        height: track.h,
-        borderRadius: track.h / 2,
-        border: "none",
-        cursor: disabled ? "default" : "pointer",
-        background: checked ? th.toggleOn : th.toggleOff,
-        opacity: disabled ? 0.5 : 1,
-        transition: "background 0.15s",
-        padding: 0,
-      }}
-    >
-      <span
-        style={{
-          position: "absolute",
-          top: inset,
-          left: checked ? track.w - knob - inset : inset,
-          width: knob,
-          height: knob,
-          borderRadius: "50%",
-          background: "#fff",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-          transition: "left 0.15s",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        {sm && checked && <Check size={8} strokeWidth={4} color={th.toggleOn} />}
-      </span>
-    </button>
-  );
-}
 
 /** Carbon-style segmented button group. */
 export function SegmentedControl({ th, opts, value, onChange }: {

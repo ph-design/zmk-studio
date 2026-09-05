@@ -8,6 +8,7 @@ import type { CarbonTheme } from "../carbon/theme";
 import { PhysicalLayout } from "../keyboard/PhysicalLayout";
 import { BehaviorBindingPicker } from "../behaviors/BehaviorBindingPicker";
 import { NotSupportedHint, Badge } from "../carbon/CarbonChrome";
+import { RealCarbonToggle } from "../carbon/RealCarbonToggle";
 import { summarizeCombo, summarizeBinding } from "./comboUtils";
 import { combosEqual } from "./useCombos";
 
@@ -298,7 +299,9 @@ const ComboEditor = ({
               <PhysicalLayout
                 positions={layout.keys.map((k, i) => ({
                   id: `key-${i}`,
-                  header: `${i}`,
+                  // Position number is the key's only content, so it renders
+                  // centered at a readable size instead of the tiny header style.
+                  children: <span className="text-[13px] leading-none">{i}</span>,
                   x: k.x / 100.0,
                   y: k.y / 100.0,
                   width: k.width / 100,
@@ -319,22 +322,22 @@ const ComboEditor = ({
           )}
 
           <div className="flex items-center gap-3">
-            <span className="text-sm text-base-content/60 min-w-[7rem] shrink-0 whitespace-nowrap">
+            <span className="text-base text-base-content/60 min-w-[7rem] shrink-0 whitespace-nowrap">
               {t("combos.positions", "Key positions")}
             </span>
             {/* Clearing the whole slot is a rail action, not a field-level one —
                 see the bottom bar in the slot list. */}
-            <span className="text-sm text-base-content font-medium flex-1 min-w-0 truncate">
+            <span className="text-base text-base-content font-medium flex-1 min-w-0 truncate">
               {cfg.keyPositions.length > 0 ? cfg.keyPositions.map((p) => `#${p}`).join(" + ") : t("combos.none", "None")}
             </span>
           </div>
 
           {editableBehavior ? (
             <div className="flex items-center gap-3">
-              <span className="text-sm text-base-content/60 min-w-[7rem] shrink-0 whitespace-nowrap">
+              <span className="text-base text-base-content/60 min-w-[7rem] shrink-0 whitespace-nowrap">
                 {t("combos.behavior", "Behavior")}
               </span>
-              <span className="text-sm text-base-content font-medium flex-1 min-w-0 truncate">
+              <span className="text-base text-base-content font-medium flex-1 min-w-0 truncate">
                 {summarizeBinding(cfg.behavior, behaviors)}
               </span>
               {(cfg.behavior?.behaviorId ?? -1) >= 0 && (
@@ -418,8 +421,8 @@ const ComboEditor = ({
 
 const ReadOnlyField = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <div className="flex items-center gap-3">
-    <span className="text-sm text-base-content/60 min-w-[7rem] shrink-0 whitespace-nowrap">{label}</span>
-    <span className="text-sm text-base-content font-medium">{children}</span>
+    <span className="text-base text-base-content/60 min-w-[7rem] shrink-0 whitespace-nowrap">{label}</span>
+    <span className="text-base text-base-content font-medium">{children}</span>
   </div>
 );
 
@@ -458,7 +461,7 @@ const MsField = ({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-3">
-        <span className="text-sm text-base-content/60 min-w-[7rem] shrink-0 whitespace-nowrap">{label}</span>
+        <span className="text-base text-base-content/60 min-w-[7rem] shrink-0 whitespace-nowrap">{label}</span>
         <input
           type="range"
           aria-label={label}
@@ -535,32 +538,14 @@ const ToggleRow = ({
   return (
     <div className="flex items-center justify-between gap-3 py-1">
       <div className="flex flex-col min-w-0">
-        <span className="text-sm text-base-content leading-tight">{label}</span>
+        <span className="text-base text-base-content leading-tight">{label}</span>
         {desc ? <span className="text-sm text-base-content/55 leading-snug">{desc}</span> : null}
       </div>
-      <div className="flex items-center gap-1 flex-shrink-0" role="radiogroup" aria-label={label}>
-        <button
-          type="button"
-          role="radio"
-          aria-checked={checked}
-          onClick={() => onChange(true)}
-          className={`px-3 py-1 rounded text-sm cursor-pointer transition-colors ${
-            checked ? "bg-primary text-primary-content" : "text-base-content hover:bg-base-300"
-          }`}
-        >
-          {t("combos.on", "On")}
-        </button>
-        <button
-          type="button"
-          role="radio"
-          aria-checked={!checked}
-          onClick={() => onChange(false)}
-          className={`px-3 py-1 rounded text-sm cursor-pointer transition-colors ${
-            !checked ? "bg-primary text-primary-content" : "text-base-content hover:bg-base-300"
-          }`}
-        >
-          {t("combos.off", "Off")}
-        </button>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <RealCarbonToggle checked={checked} onChange={onChange} />
+        <span aria-hidden="true" className="w-6 text-sm text-base-content/55">
+          {checked ? t("combos.on", "On") : t("combos.off", "Off")}
+        </span>
       </div>
     </div>
   );
