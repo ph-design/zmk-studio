@@ -5,7 +5,8 @@ import type { BehaviorBinding, Layer } from "@zmkfirmware/zmk-studio-ts-client/k
 import type { GetBehaviorDetailsResponse } from "@zmkfirmware/zmk-studio-ts-client/behaviors";
 
 import type { CarbonTheme } from "./theme";
-import { Loading, NotSupportedHint, Toggle } from "./CarbonChrome";
+import { Loading, NotSupportedHint } from "./CarbonChrome";
+import { RealCarbonToggle } from "./RealCarbonToggle";
 import { BehaviorBindingPicker } from "../behaviors/BehaviorBindingPicker";
 import { summarizeBinding } from "../combos/comboUtils";
 import {
@@ -542,7 +543,7 @@ function EnableBar({ th, title, desc, enabled, onChange }: {
 }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, height: 48, padding: "0 20px", borderBottom: `1px solid ${th.border}`, flexShrink: 0 }}>
-      <Toggle th={th} checked={enabled} onChange={onChange} />
+      <RealCarbonToggle checked={enabled} onChange={onChange} />
       <span style={{ fontSize: 14, fontWeight: 600, color: th.textPrimary, flexShrink: 0 }}>{title}</span>
       <span style={{ fontSize: 12, color: th.textHelper, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
         {desc}
@@ -693,7 +694,7 @@ function TapSettings({ th, t, config, behaviors, layers, thresholdMax, onEditSlo
           </Field>
           <Field th={th} label={t("motion.tap.timeLimit", "Max tap length")} tag="TIME_LIMIT"
             value={`${config.timeLimitMs} ms`} height={24}>
-            <Slider th={th} value={config.timeLimitMs} min={10} max={200} step={5} onCommit={(v) => set({ timeLimitMs: v })} />
+            <Slider th={th} value={config.timeLimitMs} min={20} max={200} step={5} onCommit={(v) => set({ timeLimitMs: v })} />
           </Field>
           <Field th={th} label={t("motion.tap.latency", "Dead time after trigger")} tag="TIME_LATENCY"
             value={`${config.latencyMs} ms`} height={24}>
@@ -703,28 +704,6 @@ function TapSettings({ th, t, config, behaviors, layers, thresholdMax, onEditSlo
             value={`${config.windowMs} ms`} height={24}
             hint={t("motion.tap.windowHint", "When a single and a double share a side, the single fires this long late so the double can win")}>
             <Slider th={th} value={config.windowMs} min={50} max={800} step={10} onCommit={(v) => set({ windowMs: v })} />
-          </Field>
-
-          <GroupHeading th={th}>{t("motion.tap.axesGroup", "Tap axes")}</GroupHeading>
-          <Field th={th} label={t("motion.tap.clickAxes", "Responding axes")} tag="CLICK_CFG"
-            hint={t("motion.tap.clickAxesHint", "Only selected axes trigger taps. A case tap usually dominates one axis, so limiting to it rejects noise from the others; the tap test panel shows which axis each recognition came from")}>
-            {(["X", "Y", "Z"] as const).map((axis) => {
-              const bit = axis === "X" ? 0x03 : axis === "Y" ? 0x0c : 0x30;
-              const active = (config.clickAxes & bit) === bit;
-              return (
-                <button key={axis}
-                  onClick={() => set({ clickAxes: active ? config.clickAxes & ~bit : config.clickAxes | bit })}
-                  style={{
-                    minWidth: 44, height: 28, padding: "0 12px", fontSize: 12, cursor: "pointer",
-                    fontFamily: "var(--font-mono)", fontWeight: 600,
-                    background: active ? th.interactive : "transparent",
-                    color: active ? "#fff" : th.textSecondary,
-                    border: `1px solid ${active ? th.interactive : th.border}`,
-                  }}>
-                  {axis}
-                </button>
-              );
-            })}
           </Field>
 
           <GroupHeading th={th}>{t("motion.tap.layersGroup", "Active layers")}</GroupHeading>

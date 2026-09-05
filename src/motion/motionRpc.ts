@@ -131,39 +131,11 @@ export function withSlotBinding(
   return { ...config, [slot]: binding };
 }
 
-function bindingKey(b: BehaviorBinding | undefined): string {
-  return b === undefined ? "-" : `${b.behaviorId}/${b.param1}/${b.param2}`;
-}
-
-export function tapConfigsEqual(a: TapConfig, b: TapConfig): boolean {
-  return (
-    a.enabled === b.enabled &&
-    a.threshold === b.threshold &&
-    a.timeLimitMs === b.timeLimitMs &&
-    a.latencyMs === b.latencyMs &&
-    a.windowMs === b.windowMs &&
-    a.layerMask === b.layerMask &&
-    TAP_SLOTS.every((s) => bindingKey(a[s.slot]) === bindingKey(b[s.slot]))
-  );
-}
-
-export function carryConfigsEqual(a: CarryConfig, b: CarryConfig): boolean {
-  return (
-    a.enabled === b.enabled &&
-    a.motionThreshold === b.motionThreshold &&
-    a.motionDurationMs === b.motionDurationMs
-  );
-}
-
-export function stillWakeConfigsEqual(a: StillWakeConfig, b: StillWakeConfig): boolean {
-  return a.enabled === b.enabled && a.settleDurationMs === b.settleDurationMs;
-}
-
 export const CLICK_SRC = {
-  IA: 0x80,
-  DCLICK: 0x40,
-  SCLICK: 0x20,
-  SIGN: 0x10,
+  IA: 0x40,
+  DCLICK: 0x20,
+  SCLICK: 0x10,
+  SIGN: 0x08,
   Z: 0x04,
   Y: 0x02,
   X: 0x01,

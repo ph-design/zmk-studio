@@ -35,7 +35,6 @@ function defaultTapConfig(): TapConfig {
     rightSingleBinding: undefined,
     rightDoubleBinding: undefined,
     layerMask: 0,
-    clickAxes: 0x3f,
   };
 }
 
